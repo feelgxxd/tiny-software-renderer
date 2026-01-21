@@ -21,9 +21,18 @@ int main()
         fb,
         proj,
         Vec3(-0.5f, -0.5f, -2.0f),
-        Vec3( 0.5f, -0.5f, -2.0f),
+        Vec3(0.5f, -0.5f, -2.0f),
         Vec3( 0.0f,  0.5f, -2.0f),
         0x00FF00
+    );
+
+    drawTriangleWireframeProjected(
+        fb,
+        proj,
+        Vec3(-0.5f, -0.5f, -2.0f),
+        Vec3( 0.5f, -0.5f, -2.0f),
+        Vec3( 0.0f,  0.5f, -2.0f),
+        0xFFFFFF
     );
 
     runWindow(fb);

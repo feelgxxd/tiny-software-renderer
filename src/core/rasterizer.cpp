@@ -9,6 +9,26 @@ float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c)
          - (b.y - a.y) * (c.x - a.x);
 }
 
+void drawLine(Framebuffer& fb, int x0, int y0, int x1, int y1, uint32_t color)
+{
+    int dx = std::abs(x1 - x0);
+    int dy = std::abs(y1 - y0);
+
+    int sx = (x0 < x1) ? 1 : -1;
+    int sy = (y0 < y1) ? 1 : -1;
+
+    int err = dx - dy;
+
+    while (true) {
+        fb.setPixel(x0, y0, color);
+        if (x0 == x1 && y0 == y1) break;
+
+        int e2 = 2 * err;
+        if (e2 > -dy) { err -= dy; x0 += sx; }
+        if (e2 < dx)  { err += dx; y0 += sy; }
+    }
+}
+
 void drawTriangleFilled(
     Framebuffer& fb,
     const Vec3& v0,
@@ -17,8 +37,6 @@ void drawTriangleFilled(
     uint32_t color
 )
 {
-    fb.setPixel(10, 10, 0xFF0000); // KIRMIZI PIXEL
-
     float area = edgeFunction(v0, v1, v2);
     
     int minX = (int)std::min({ v0.x, v1.x, v2.x });
@@ -93,12 +111,44 @@ void drawTriangleProjected(
     Vec3 v1,
     Vec3 v2,
     uint32_t color
-) {
-    fb.setPixel(20, 20, 0x00FFFF); // CAMGÖBEĞİ
-
+)
+{
     Vec3 p0 = projectVertex(v0, proj, fb.width(), fb.height());
     Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
     Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
 
+    float area = edgeFunction(p0, p1, p2);
+    if (area <= 0.0f)
+        return;
+
     drawTriangleFilled(fb, p0, p1, p2, color);
+}
+
+void drawTriangleWireframe(
+    Framebuffer& fb,
+    const Vec3& v0,
+    const Vec3& v1,
+    const Vec3& v2,
+    uint32_t color
+)
+{
+    drawLine(fb, (int)v0.x, (int)v0.y, (int)v1.x, (int)v1.y, color);
+    drawLine(fb, (int)v1.x, (int)v1.y, (int)v2.x, (int)v2.y, color);
+    drawLine(fb, (int)v2.x, (int)v2.y, (int)v0.x, (int)v0.y, color);
+}
+
+void drawTriangleWireframeProjected(
+    Framebuffer& fb,
+    const Mat4& proj,
+    Vec3 v0,
+    Vec3 v1,
+    Vec3 v2,
+    uint32_t color
+)
+{
+    Vec3 p0 = projectVertex(v0, proj, fb.width(), fb.height());
+    Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
+    Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
+
+    drawTriangleWireframe(fb, p0, p1, p2, color);
 }

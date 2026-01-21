@@ -7,6 +7,13 @@
 
 float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c);
 
+void drawLine(
+    Framebuffer& fb,
+    int x0, int y0,
+    int x1, int y1,
+    uint32_t color
+);
+
 void drawTriangleFilled(
     Framebuffer& fb,
     const Vec3& v0,
@@ -18,6 +25,23 @@ void drawTriangleFilled(
 void drawTriangleProjected(
     Framebuffer& fb,
     const Mat4& mvp,
+    Vec3 v0,
+    Vec3 v1,
+    Vec3 v2,
+    uint32_t color
+);
+
+void drawTriangleWireframe(
+    Framebuffer& fb,
+    const Vec3& v0,
+    const Vec3& v1,
+    const Vec3& v2,
+    uint32_t color
+);
+
+void drawTriangleWireframeProjected(
+    Framebuffer& fb,
+    const Mat4& proj,
     Vec3 v0,
     Vec3 v1,
     Vec3 v2,
