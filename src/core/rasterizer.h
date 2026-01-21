@@ -1,5 +1,14 @@
 #pragma once
-#include <cstdint>
+#include "math/vec3.h"          
 #include "core/framebuffer.h"
+#include <cstdint>
 
-void drawLine(Framebuffer& fb, int x0, int y0, int x1, int y1, uint32_t color);
+float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c);
+
+void drawTriangleFilled(
+    Framebuffer& fb,
+    const Vec3& v0,
+    const Vec3& v1,
+    const Vec3& v2,
+    uint32_t color
+);

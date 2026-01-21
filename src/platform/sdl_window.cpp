@@ -11,10 +11,11 @@ void runWindow(Framebuffer& fb)
         SDL_WINDOWPOS_CENTERED,
         fb.width(),
         fb.height(),
-        SDL_WINDOW_SHOWN
+        0
     );
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_ARGB8888,
@@ -34,7 +35,13 @@ void runWindow(Framebuffer& fb)
                 running = false;
         }
 
-        SDL_UpdateTexture(texture, nullptr, fb.data(), fb.width() * sizeof(uint32_t));
+        SDL_UpdateTexture(
+            texture,
+            nullptr,
+            fb.data(),
+            fb.width() * sizeof(uint32_t)
+        );
+
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
         SDL_RenderPresent(renderer);
