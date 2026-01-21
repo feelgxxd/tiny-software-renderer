@@ -80,10 +80,13 @@ void drawTriangleFilled(
                     w0 * v0.z +
                     w1 * v1.z +
                     w2 * v2.z;
+         
+                if (depth < 0.0f || depth > 1.0f)
+                    continue;
 
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    fb.setPixel(x, y, color);
+                    fb.setPixel(x, y, 0x00FF00);
                 }
             }
         }
@@ -96,11 +99,7 @@ static Vec3 projectVertex(
     int width,
     int height
 ) {
-    Vec4 clip = Mat4::multiply(
-        proj,
-        Vec4(v.x, v.y, v.z, 1.0f)
-    );
-
+    Vec4 clip = Mat4::multiply(proj, Vec4(v.x, v.y, v.z, 1.0f));
     if (clip.w == 0.0f)
         return Vec3(0, 0, 0);
 
@@ -112,8 +111,8 @@ static Vec3 projectVertex(
     // NDC → Screen
     Vec3 out;
     out.x = (clip.x + 1.0f) * 0.5f * width;
-    out.y = (1.0f + (clip.y - 1.0f) * 0.5f) * height;
-    out.z = clip.z;
+    out.y = (1.0f - (clip.y + 1.0f) * 0.5f) * height;
+    out.z = clip.z;  // Z değerini NDC olarak alıyoruz.
 
     return out;
 }

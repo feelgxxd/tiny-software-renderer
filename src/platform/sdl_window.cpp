@@ -33,10 +33,12 @@ void runWindow(Framebuffer& fb)
                 running = false;
         }
 
-        // ❌ CLEAR YOK
-        SDL_UpdateTexture(texture, nullptr, fb.data(), fb.width() * sizeof(uint32_t));
         SDL_RenderClear(renderer);
+
+        SDL_UpdateTexture(texture, nullptr, fb.data(), fb.width() * sizeof(uint32_t));
+
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
+
         SDL_RenderPresent(renderer);
     }
 }

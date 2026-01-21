@@ -28,6 +28,22 @@ struct Mat4 {
         return r;
     }
 
+    static Mat4 multiply(const Mat4& a, const Mat4& b) {
+        Mat4 result = {};
+
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                float sum = 0.0f;
+                for (int k = 0; k < 4; ++k) {
+                    sum += a.m[i][k] * b.m[k][j];
+                }
+                result.m[i][j] = sum;
+            }
+        }
+
+        return result;
+    }
+
     static Mat4 perspective(float fov, float aspect, float znear, float zfar) {
         Mat4 r = {};
         float tanHalfFov = std::tan(fov * 0.5f);
@@ -51,5 +67,31 @@ struct Mat4 {
         r.m[3][3] = 1.0f;
 
         return r;
+    }
+
+    static Mat4 lookAt(const Vec3& eye, const Vec3& center, const Vec3& up) {
+        Vec3 f = (center - eye).normalized();  
+        Vec3 s = cross(f, up).normalized();    
+        Vec3 u = cross(s, f);                   
+
+        Mat4 result = identity();
+
+        result.m[0][0] = s.x;
+        result.m[1][0] = s.y;
+        result.m[2][0] = s.z;
+
+        result.m[0][1] = u.x;
+        result.m[1][1] = u.y;
+        result.m[2][1] = u.z;
+
+        result.m[0][2] = -f.x;
+        result.m[1][2] = -f.y;
+        result.m[2][2] = -f.z;
+
+        result.m[3][0] = -dot(s, eye);
+        result.m[3][1] = -dot(u, eye);
+        result.m[3][2] = dot(f, eye);
+
+        return result;
     }
 };
