@@ -67,7 +67,7 @@ events:
       The output was:
       0
       .NET Framework i├ğin MSBuild s├╝r├╝m 18.0.5+e22287bf1
-      Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 06:42:39.
+      Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 07:34:20.
       
       1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\4.2.1\\CompilerIdC\\CompilerIdC.vcxproj" projesi (varsay─▒lan hedefler).
       PrepareForBuild:
@@ -96,7 +96,7 @@ events:
           0 Uyar─▒
           0 Hata
       
-      Ge├ğen S├╝re 00:00:00.64
+      Ge├ğen S├╝re 00:00:00.73
       
       
       Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "CompilerIdC.exe"
@@ -559,7 +559,7 @@ events:
       The output was:
       0
       .NET Framework i├ğin MSBuild s├╝r├╝m 18.0.5+e22287bf1
-      Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 06:42:40.
+      Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 07:34:21.
       
       1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\4.2.1\\CompilerIdCXX\\CompilerIdCXX.vcxproj" projesi (varsay─▒lan hedefler).
       PrepareForBuild:
@@ -588,7 +588,7 @@ events:
           0 Uyar─▒
           0 Hata
       
-      Ge├ğen S├╝re 00:00:00.66
+      Ge├ğen S├╝re 00:00:00.63
       
       
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "CompilerIdCXX.exe"
@@ -878,8 +878,8 @@ events:
     checks:
       - "Detecting C compiler ABI info"
     directories:
-      source: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-v70ypv"
-      binary: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-v70ypv"
+      source: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-wvb880"
+      binary: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-wvb880"
     cmakeVariables:
       CMAKE_C_FLAGS: "/DWIN32 /D_WINDOWS"
       CMAKE_C_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -888,39 +888,39 @@ events:
       variable: "CMAKE_C_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-v70ypv'
+        Change Dir: 'D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-wvb880'
         
-        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_792c0.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_7a938.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
         .NET Framework i├ğin MSBuild s├╝r├╝m 18.0.5+e22287bf1
-        Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 06:42:41.
+        Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 07:34:22.
         
-        1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-v70ypv\\cmTC_792c0.vcxproj" projesi (varsay─▒lan hedefler).
+        1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wvb880\\cmTC_7a938.vcxproj" projesi (varsay─▒lan hedefler).
         PrepareForBuild:
           Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
-          "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-v70ypv\\Debug\\" dizini olu┼şturuluyor.
-          "cmTC_792c0.dir\\Debug\\cmTC_792c0.tlog\\" dizini olu┼şturuluyor.
+          "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wvb880\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_7a938.dir\\Debug\\cmTC_7a938.tlog\\" dizini olu┼şturuluyor.
         InitializeBuildStatus:
-          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_792c0.dir\\Debug\\cmTC_792c0.tlog\\unsuccessfulbuild" olu┼şturuluyor.
-          "cmTC_792c0.dir\\Debug\\cmTC_792c0.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_7a938.dir\\Debug\\cmTC_7a938.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_7a938.dir\\Debug\\cmTC_7a938.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
         ClCompile:
-          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_792c0.dir\\Debug\\\\" /Fd"cmTC_792c0.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_7a938.dir\\Debug\\\\" /Fd"cmTC_7a938.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
           x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.50.35722
           Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
-          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_792c0.dir\\Debug\\\\" /Fd"cmTC_792c0.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /RTC1 /MDd /Fo"cmTC_7a938.dir\\Debug\\\\" /Fd"cmTC_7a938.dir\\Debug\\vc145.pdb" /external:W1 /TC /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCCompilerABI.c"
           CMakeCCompilerABI.c
         Link:
-          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-v70ypv\\Debug\\cmTC_792c0.exe" /INCREMENTAL /ILK:"cmTC_792c0.dir\\Debug\\cmTC_792c0.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-v70ypv/Debug/cmTC_792c0.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-v70ypv/Debug/cmTC_792c0.lib" /MACHINE:X64  /machine:x64 cmTC_792c0.dir\\Debug\\CMakeCCompilerABI.obj
-          cmTC_792c0.vcxproj -> D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-v70ypv\\Debug\\cmTC_792c0.exe
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wvb880\\Debug\\cmTC_7a938.exe" /INCREMENTAL /ILK:"cmTC_7a938.dir\\Debug\\cmTC_7a938.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-wvb880/Debug/cmTC_7a938.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-wvb880/Debug/cmTC_7a938.lib" /MACHINE:X64  /machine:x64 cmTC_7a938.dir\\Debug\\CMakeCCompilerABI.obj
+          cmTC_7a938.vcxproj -> D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wvb880\\Debug\\cmTC_7a938.exe
         FinalizeBuildStatus:
-          "cmTC_792c0.dir\\Debug\\cmTC_792c0.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
-          "cmTC_792c0.dir\\Debug\\cmTC_792c0.tlog\\cmTC_792c0.lastbuildstate" ├Â─şesine eri┼şiliyor.
-        "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-v70ypv\\cmTC_792c0.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+          "cmTC_7a938.dir\\Debug\\cmTC_7a938.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+          "cmTC_7a938.dir\\Debug\\cmTC_7a938.tlog\\cmTC_7a938.lastbuildstate" ├Â─şesine eri┼şiliyor.
+        "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-wvb880\\cmTC_7a938.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
         
         Olu┼şturma ba┼şar─▒l─▒ oldu.
             0 Uyar─▒
             0 Hata
         
-        Ge├ğen S├╝re 00:00:00.71
+        Ge├ğen S├╝re 00:00:00.58
         
       exitCode: 0
   -
@@ -960,8 +960,8 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-cdm455"
-      binary: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-cdm455"
+      source: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-i1c1tv"
+      binary: "D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-i1c1tv"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "/DWIN32 /D_WINDOWS /GR /EHsc"
       CMAKE_CXX_FLAGS_DEBUG: "/Zi /Ob0 /Od /RTC1"
@@ -971,39 +971,39 @@ events:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: 'D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-cdm455'
+        Change Dir: 'D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-i1c1tv'
         
-        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_cc756.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
+        Run Build Command(s): D:/VisualStudio/MSBuild/Current/Bin/amd64/MSBuild.exe cmTC_54b83.vcxproj /p:Configuration=Debug /p:Platform=x64 /p:VisualStudioVersion=18.0 /v:n
         .NET Framework i├ğin MSBuild s├╝r├╝m 18.0.5+e22287bf1
-        Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 06:42:42.
+        Olu┼şturma ba┼şlat─▒ld─▒: 21.01.2026 07:34:23.
         
-        1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cdm455\\cmTC_cc756.vcxproj" projesi (varsay─▒lan hedefler).
+        1 d├╝─ş├╝m├╝nde "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i1c1tv\\cmTC_54b83.vcxproj" projesi (varsay─▒lan hedefler).
         PrepareForBuild:
           Structured output is enabled. The formatting of compiler diagnostics will reflect the error hierarchy. See https://aka.ms/cpp/structured-output for more details.
-          "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cdm455\\Debug\\" dizini olu┼şturuluyor.
-          "cmTC_cc756.dir\\Debug\\cmTC_cc756.tlog\\" dizini olu┼şturuluyor.
+          "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i1c1tv\\Debug\\" dizini olu┼şturuluyor.
+          "cmTC_54b83.dir\\Debug\\cmTC_54b83.tlog\\" dizini olu┼şturuluyor.
         InitializeBuildStatus:
-          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_cc756.dir\\Debug\\cmTC_cc756.tlog\\unsuccessfulbuild" olu┼şturuluyor.
-          "cmTC_cc756.dir\\Debug\\cmTC_cc756.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
+          "AlwaysCreate" belirtildi─şi i├ğin "cmTC_54b83.dir\\Debug\\cmTC_54b83.tlog\\unsuccessfulbuild" olu┼şturuluyor.
+          "cmTC_54b83.dir\\Debug\\cmTC_54b83.tlog\\unsuccessfulbuild" ├Â─şesine eri┼şiliyor.
         ClCompile:
-          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_cc756.dir\\Debug\\\\" /Fd"cmTC_cc756.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\CL.exe /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_54b83.dir\\Debug\\\\" /Fd"cmTC_54b83.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
           x64 i├ğin Microsoft (R) C/C++ ─░yile┼ştirmeli Derleyicisi S├╝r├╝m 19.50.35722
           Telif Hakk─▒ (C) Microsoft Corporation. T├╝m haklar─▒ sakl─▒d─▒r.
-          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_cc756.dir\\Debug\\\\" /Fd"cmTC_cc756.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
+          cl /c /Zi /W1 /WX- /diagnostics:column /Od /Ob0 /D _MBCS /D WIN32 /D _WINDOWS /D _MBCS /D "CMAKE_INTDIR=\\"Debug\\"" /EHsc /RTC1 /MDd /GR /Fo"cmTC_54b83.dir\\Debug\\\\" /Fd"cmTC_54b83.dir\\Debug\\vc145.pdb" /external:W1 /TP /errorReport:queue "C:\\Program Files\\CMake\\share\\cmake-4.2\\Modules\\CMakeCXXCompilerABI.cpp"
           CMakeCXXCompilerABI.cpp
         Link:
-          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cdm455\\Debug\\cmTC_cc756.exe" /INCREMENTAL /ILK:"cmTC_cc756.dir\\Debug\\cmTC_cc756.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-cdm455/Debug/cmTC_cc756.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-cdm455/Debug/cmTC_cc756.lib" /MACHINE:X64  /machine:x64 cmTC_cc756.dir\\Debug\\CMakeCXXCompilerABI.obj
-          cmTC_cc756.vcxproj -> D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cdm455\\Debug\\cmTC_cc756.exe
+          D:\\VisualStudio\\VC\\Tools\\MSVC\\14.50.35717\\bin\\HostX64\\x64\\link.exe /OUT:"D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i1c1tv\\Debug\\cmTC_54b83.exe" /INCREMENTAL /ILK:"cmTC_54b83.dir\\Debug\\cmTC_54b83.ilk" /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib shell32.lib ole32.lib oleaut32.lib uuid.lib comdlg32.lib advapi32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-i1c1tv/Debug/cmTC_54b83.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /IMPLIB:"D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/CMakeScratch/TryCompile-i1c1tv/Debug/cmTC_54b83.lib" /MACHINE:X64  /machine:x64 cmTC_54b83.dir\\Debug\\CMakeCXXCompilerABI.obj
+          cmTC_54b83.vcxproj -> D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i1c1tv\\Debug\\cmTC_54b83.exe
         FinalizeBuildStatus:
-          "cmTC_cc756.dir\\Debug\\cmTC_cc756.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
-          "cmTC_cc756.dir\\Debug\\cmTC_cc756.tlog\\cmTC_cc756.lastbuildstate" ├Â─şesine eri┼şiliyor.
-        "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-cdm455\\cmTC_cc756.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
+          "cmTC_54b83.dir\\Debug\\cmTC_54b83.tlog\\unsuccessfulbuild" dosyas─▒ siliniyor.
+          "cmTC_54b83.dir\\Debug\\cmTC_54b83.tlog\\cmTC_54b83.lastbuildstate" ├Â─şesine eri┼şiliyor.
+        "D:\\feelgxxd\\tiny_software_renderer\\build\\CMakeFiles\\CMakeScratch\\TryCompile-i1c1tv\\cmTC_54b83.vcxproj" Projesini Olu┼şturma ─░┼şlemi Tamamland─▒ (varsay─▒lan hedefler).
         
         Olu┼şturma ba┼şar─▒l─▒ oldu.
             0 Uyar─▒
             0 Hata
         
-        Ge├ğen S├╝re 00:00:00.61
+        Ge├ğen S├╝re 00:00:00.69
         
       exitCode: 0
   -

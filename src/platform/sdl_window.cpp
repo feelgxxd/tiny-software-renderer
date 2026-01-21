@@ -15,7 +15,6 @@ void runWindow(Framebuffer& fb)
     );
 
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
-
     SDL_Texture* texture = SDL_CreateTexture(
         renderer,
         SDL_PIXELFORMAT_ARGB8888,
@@ -25,30 +24,19 @@ void runWindow(Framebuffer& fb)
     );
 
     bool running = true;
-    SDL_Event event;
-
     while (running)
     {
-        while (SDL_PollEvent(&event))
+        SDL_Event e;
+        while (SDL_PollEvent(&e))
         {
-            if (event.type == SDL_QUIT)
+            if (e.type == SDL_QUIT)
                 running = false;
         }
 
-        SDL_UpdateTexture(
-            texture,
-            nullptr,
-            fb.data(),
-            fb.width() * sizeof(uint32_t)
-        );
-
+        // ❌ CLEAR YOK
+        SDL_UpdateTexture(texture, nullptr, fb.data(), fb.width() * sizeof(uint32_t));
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, nullptr, nullptr);
         SDL_RenderPresent(renderer);
     }
-
-    SDL_DestroyTexture(texture);
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
 }
