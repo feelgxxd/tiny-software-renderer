@@ -32,7 +32,7 @@ bool Framebuffer::testAndSetDepth(int x, int y, float depth)
         return false;
 
     int index = y * m_width + x;
-    if (depth < m_depth[index]) {
+    if (depth > m_depth[index]) {
         m_depth[index] = depth;
         return true;
     }

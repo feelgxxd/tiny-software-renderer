@@ -9,6 +9,16 @@ float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c)
          - (b.y - a.y) * (c.x - a.x);
 }
 
+bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
+{
+    Vec3 e1 = v1 - v0;
+    Vec3 e2 = v2 - v0;
+
+    Vec3 normal = cross(e1, e2);
+
+    return normal.z <= 0;
+}
+
 void drawLine(Framebuffer& fb, int x0, int y0, int x1, int y1, uint32_t color)
 {
     int dx = std::abs(x1 - x0);
@@ -38,39 +48,43 @@ void drawTriangleFilled(
 )
 {
     float area = edgeFunction(v0, v1, v2);
-    
-    int minX = (int)std::min({ v0.x, v1.x, v2.x });
-    int maxX = (int)std::max({ v0.x, v1.x, v2.x });
-    int minY = (int)std::min({ v0.y, v1.y, v2.y });
-    int maxY = (int)std::max({ v0.y, v1.y, v2.y });
+    if (area == 0.0f) return;
+
+    bool topLeft = area > 0.0f;
+
+    int minX = (int)std::floor(std::min({ v0.x, v1.x, v2.x }));
+    int maxX = (int)std::ceil (std::max({ v0.x, v1.x, v2.x }));
+    int minY = (int)std::floor(std::min({ v0.y, v1.y, v2.y }));
+    int maxY = (int)std::ceil (std::max({ v0.y, v1.y, v2.y }));
 
     for (int y = minY; y <= maxY; y++) {
         for (int x = minX; x <= maxX; x++) {
-            Vec3 p(x + 0.5f, y + 0.5f, 0);
+
+            Vec3 p(x + 0.5f, y + 0.5f, 0.0f);
 
             float w0 = edgeFunction(v1, v2, p);
             float w1 = edgeFunction(v2, v0, p);
             float w2 = edgeFunction(v0, v1, p);
 
-            if ((w0 >= 0 && w1 >= 0 && w2 >= 0 && area > 0) ||
-            (w0 <= 0 && w1 <= 0 && w2 <= 0 && area < 0))
+            if (
+                (w0 >= 0) == topLeft &&
+                (w1 >= 0) == topLeft &&
+                (w2 >= 0) == topLeft
+            )
             {
-                float alpha = w0 / area;
-                float beta  = w1 / area;
-                float gamma = w2 / area;
+                w0 /= area;
+                w1 /= area;
+                w2 /= area;
 
-                float depth = alpha * v0.z + beta * v1.z + gamma * v2.z;
+                float depth =
+                    w0 * v0.z +
+                    w1 * v1.z +
+                    w2 * v2.z;
 
                 if (fb.testAndSetDepth(x, y, depth))
                 {
                     fb.setPixel(x, y, color);
                 }
-            }
-
-            if ((w0 >= 0 && w1 >= 0 && w2 >= 0 && area > 0) ||
-                (w0 <= 0 && w1 <= 0 && w2 <= 0 && area < 0))
-            {
-                fb.setPixel(x, y, color);
             }
         }
     }
@@ -117,8 +131,7 @@ void drawTriangleProjected(
     Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
     Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
 
-    float area = edgeFunction(p0, p1, p2);
-    if (area <= 0.0f)
+    if (isBackface(p0, p1, p2))
         return;
 
     drawTriangleFilled(fb, p0, p1, p2, color);
@@ -150,5 +163,24 @@ void drawTriangleWireframeProjected(
     Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
     Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
 
-    drawTriangleWireframe(fb, p0, p1, p2, color);
+    drawLine(
+        fb,
+        (int)p0.x, (int)p0.y,
+        (int)p1.x, (int)p1.y,
+        color
+    );
+
+    drawLine(
+        fb,
+        (int)p1.x, (int)p1.y,
+        (int)p2.x, (int)p2.y,
+        color
+    );
+
+    drawLine(
+        fb,
+        (int)p2.x, (int)p2.y,
+        (int)p0.x, (int)p0.y,
+        color
+    );
 }
