@@ -35,7 +35,7 @@ void runWindow(Framebuffer& fb)
                 running = false;
         }
 
-        SDL_UpdateTexture(
+        SDL_UpdateTexture( //test
             texture,
             nullptr,
             fb.data(),
