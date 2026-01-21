@@ -11,7 +11,6 @@ public:
 
     void setPixel(int x, int y, uint32_t color);
 
-    // Z-buffer test
     bool testAndSetDepth(int x, int y, float depth);
 
     int width() const { return m_width; }

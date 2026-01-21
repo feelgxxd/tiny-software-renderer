@@ -81,38 +81,41 @@ void drawTriangleFilled(
                     w1 * v1.z +
                     w2 * v2.z;
          
-                if (depth < 0.0f || depth > 1.0f)
-                    continue;
-
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    fb.setPixel(x, y, 0x00FF00);
+                    fb.setPixel(x, y, color);
                 }
             }
         }
     }
 }
 
-static Vec3 projectVertex(
+struct ProjectedVertex {
+    Vec3 screen; 
+    float invW;
+};
+
+static ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& proj,
     int width,
     int height
 ) {
-    Vec4 clip = Mat4::multiply(proj, Vec4(v.x, v.y, v.z, 1.0f));
-    if (clip.w == 0.0f)
-        return Vec3(0, 0, 0);
+    Vec4 clip = Mat4::multiply(
+        proj,
+        Vec4(v.x, v.y, v.z, 1.0f)
+    );
 
-    // Perspective divide
-    clip.x /= clip.w;
-    clip.y /= clip.w;
-    clip.z /= clip.w;
+    ProjectedVertex out;
+    out.invW = 1.0f / clip.w;
 
-    // NDC → Screen
-    Vec3 out;
-    out.x = (clip.x + 1.0f) * 0.5f * width;
-    out.y = (1.0f - (clip.y + 1.0f) * 0.5f) * height;
-    out.z = clip.z;  // Z değerini NDC olarak alıyoruz.
+    float ndcX = clip.x * out.invW;
+    float ndcY = clip.y * out.invW;
+    float ndcZ = clip.z * out.invW;
+
+    out.screen.x = (ndcX + 1.0f) * 0.5f * width;
+    out.screen.y = (1.0f - (ndcY + 1.0f) * 0.5f) * height;
+    out.screen.z = (ndcZ + 1.0f) * 0.5f;
 
     return out;
 }
@@ -126,14 +129,11 @@ void drawTriangleProjected(
     uint32_t color
 )
 {
-    Vec3 p0 = projectVertex(v0, proj, fb.width(), fb.height());
-    Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
-    Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
+    ProjectedVertex p0 = projectVertex(v0, proj, fb.width(), fb.height());
+    ProjectedVertex p1 = projectVertex(v1, proj, fb.width(), fb.height());
+    ProjectedVertex p2 = projectVertex(v2, proj, fb.width(), fb.height());
 
-    if (isBackface(p0, p1, p2))
-        return;
-
-    drawTriangleFilled(fb, p0, p1, p2, color);
+    drawTriangleFilled(fb, p0.screen, p1.screen, p2.screen, color);
 }
 
 void drawTriangleWireframe(
@@ -158,28 +158,11 @@ void drawTriangleWireframeProjected(
     uint32_t color
 )
 {
-    Vec3 p0 = projectVertex(v0, proj, fb.width(), fb.height());
-    Vec3 p1 = projectVertex(v1, proj, fb.width(), fb.height());
-    Vec3 p2 = projectVertex(v2, proj, fb.width(), fb.height());
+    ProjectedVertex p0 = projectVertex(v0, proj, fb.width(), fb.height());
+    ProjectedVertex p1 = projectVertex(v1, proj, fb.width(), fb.height());
+    ProjectedVertex p2 = projectVertex(v2, proj, fb.width(), fb.height());
 
-    drawLine(
-        fb,
-        (int)p0.x, (int)p0.y,
-        (int)p1.x, (int)p1.y,
-        color
-    );
-
-    drawLine(
-        fb,
-        (int)p1.x, (int)p1.y,
-        (int)p2.x, (int)p2.y,
-        color
-    );
-
-    drawLine(
-        fb,
-        (int)p2.x, (int)p2.y,
-        (int)p0.x, (int)p0.y,
-        color
-    );
+    drawLine(fb, (int)p0.screen.x, (int)p0.screen.y, (int)p1.screen.x, (int)p1.screen.y, color);
+    drawLine(fb, (int)p1.screen.x, (int)p1.screen.y, (int)p2.screen.x, (int)p2.screen.y, color);
+    drawLine(fb, (int)p2.screen.x, (int)p2.screen.y, (int)p0.screen.x, (int)p0.screen.y, color);
 }
