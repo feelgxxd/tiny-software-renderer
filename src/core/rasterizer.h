@@ -1,5 +1,7 @@
 #pragma once
-#include "math/vec3.h"          
+#include "math/vec3.h"
+#include "math/vec4.h"
+#include "math/mat4.h"
 #include "core/framebuffer.h"
 #include <cstdint>
 
@@ -10,5 +12,14 @@ void drawTriangleFilled(
     const Vec3& v0,
     const Vec3& v1,
     const Vec3& v2,
+    uint32_t color
+);
+
+void drawTriangleProjected(
+    Framebuffer& fb,
+    const Mat4& mvp,
+    Vec3 v0,
+    Vec3 v1,
+    Vec3 v2,
     uint32_t color
 );

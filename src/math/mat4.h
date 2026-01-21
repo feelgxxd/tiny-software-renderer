@@ -39,4 +39,17 @@ struct Mat4 {
         r.m[3][2] = (-znear * zfar) / (zfar - znear);
         return r;
     }
+
+    static Mat4 simplePerspective(float fov, float aspect)
+    {
+        Mat4 r = {};
+        float f = 1.0f / std::tan(fov * 0.5f);
+
+        r.m[0][0] = f / aspect;
+        r.m[1][1] = f;
+        r.m[2][2] = 1.0f;
+        r.m[3][3] = 1.0f;
+
+        return r;
+    }
 };
