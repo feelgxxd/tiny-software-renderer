@@ -25,12 +25,31 @@ int main()
 
     Mat4 viewProj = Mat4::multiply(proj, view);
 
-    drawTriangleProjected(
+    /*drawTriangleProjected(
         fb,
         viewProj,
         Vec3(-0.1f,  0.1f, -0.5f),
         Vec3( 0.1f,  0.1f, -0.5f),
         Vec3( 0.0f, -0.1f, -0.5f),
+        0xFF0000
+    );*/
+
+    
+    drawTriangleProjected(
+        fb,
+        viewProj,
+        Vec3(-0.5f, -0.5f, -1.0f),
+        Vec3( 0.5f, -0.5f, -1.0f),
+        Vec3( 0.0f,  0.5f, -1.0f),
+        0x00FF00
+    );
+
+    drawTriangleProjected(
+        fb,
+        viewProj,
+        Vec3(-0.5f, -0.5f, -2.0f),
+        Vec3( 0.5f, -0.5f, -2.0f),
+        Vec3( 0.0f,  0.5f, -2.0f),
         0xFF0000
     );
 

@@ -50,6 +50,8 @@ void drawTriangleFilled(
     float area = edgeFunction(v0, v1, v2);
     if (area == 0.0f) return;
 
+    float z = v0.z; // SABİT
+
     bool topLeft = area > 0.0f;
 
     int minX = (int)std::floor(std::min({ v0.x, v1.x, v2.x }));
