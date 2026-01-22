@@ -50,9 +50,13 @@ void drawTriangleFilled(
     float area = edgeFunction(v0, v1, v2);
     if (area == 0.0f) return;
 
-    float z = v0.z; // SABİT
+    bool flip = false;
+    if (area < 0.0f) {
+        area = -area;
+        flip = true;
+    }
 
-    bool topLeft = area > 0.0f;
+    float z = v0.z;
 
     int minX = (int)std::floor(std::min({ v0.x, v1.x, v2.x }));
     int maxX = (int)std::ceil (std::max({ v0.x, v1.x, v2.x }));
@@ -68,11 +72,13 @@ void drawTriangleFilled(
             float w1 = edgeFunction(v2, v0, p);
             float w2 = edgeFunction(v0, v1, p);
 
-            if (
-                (w0 >= 0) == topLeft &&
-                (w1 >= 0) == topLeft &&
-                (w2 >= 0) == topLeft
-            )
+            if (flip) {
+                w0 = -w0;
+                w1 = -w1;
+                w2 = -w2;
+            }
+
+            if (w0 >= 0 && w1 >= 0 && w2 >= 0)
             {
                 w0 /= area;
                 w1 /= area;
