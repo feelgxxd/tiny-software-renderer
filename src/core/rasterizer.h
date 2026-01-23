@@ -3,6 +3,7 @@
 #include "math/vec4.h"
 #include "math/mat4.h"
 #include "core/framebuffer.h"
+#include "geometry/mesh.h"
 #include <cstdint>
 
 float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c);
@@ -46,4 +47,11 @@ void drawTriangleWireframeProjected(
     Vec3 v1,
     Vec3 v2,
     uint32_t color
+);
+
+void drawMesh(
+    Framebuffer& fb,
+    const Mesh& mesh,
+    const Mat4& mvp,
+    uint32_t color = 0xFFFFFF
 );

@@ -12,6 +12,7 @@ float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c)
 struct ProjectedVertex {
     Vec3 screen; 
     float invW;
+    float ndcZ;
 };
 
 bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
@@ -44,7 +45,8 @@ static ProjectedVertex projectVertex(
 
     out.screen.x = (ndcX + 1.0f) * 0.5f * width;
     out.screen.y = (1.0f - (ndcY + 1.0f) * 0.5f) * height;
-    out.screen.z = (ndcZ + 1.0f) * 0.5f;
+    out.ndcZ = (ndcZ + 1.0f) * 0.5f;
+    out.screen.z = 0.0f;
 
     return out;
 }
@@ -142,7 +144,12 @@ void drawTriangleFilledProjected(
 
     float area = edgeFunction(p0, p1, p2);
     if (area == 0.0f) return;
-    if (area < 0.0f) area = -area;
+
+    bool flip = false;
+    if (area < 0.0f) {
+        area = -area;
+        flip = true;
+    }
 
     int minX = (int)std::floor(std::min({ p0.x, p1.x, p2.x }));
     int maxX = (int)std::ceil (std::max({ p0.x, p1.x, p2.x }));
@@ -158,23 +165,24 @@ void drawTriangleFilledProjected(
             float w1 = edgeFunction(p2, p0, p);
             float w2 = edgeFunction(p0, p1, p);
 
+            if (flip) {
+                w0 = -w0;
+                w1 = -w1;
+                w2 = -w2;
+            }
+
             if (w0 >= 0 && w1 >= 0 && w2 >= 0)
             {
                 w0 /= area;
                 w1 /= area;
                 w2 /= area;
 
-                float invW =
-                    w0 * v0.invW +
-                    w1 * v1.invW +
-                    w2 * v2.invW;
+                float depth =
+                    w0 * v0.ndcZ +
+                    w1 * v1.ndcZ +
+                    w2 * v2.ndcZ;
 
-                float depth = 1.0f / invW;
-
-                if (fb.testAndSetDepth(x, y, depth))
-                {
-                    fb.setPixel(x, y, color);
-                }
+                fb.setPixel(x, y, color);
             }
         }
     }
@@ -189,20 +197,11 @@ void drawTriangleProjected(
     uint32_t color
 )
 {
-
-    drawTriangleFilled(
-        fb,
-        Vec3(200, 200, 0.5f),
-        Vec3(600, 200, 0.5f),
-        Vec3(400, 500, 0.5f),
-        color
-    );
-    
-    /*ProjectedVertex p0 = projectVertex(v0, viewProj, fb.width(), fb.height());
+    ProjectedVertex p0 = projectVertex(v0, viewProj, fb.width(), fb.height());
     ProjectedVertex p1 = projectVertex(v1, viewProj, fb.width(), fb.height());
     ProjectedVertex p2 = projectVertex(v2, viewProj, fb.width(), fb.height());
 
-    drawTriangleFilledProjected(fb, p0, p1, p2, color);*/
+    drawTriangleFilledProjected(fb, p0, p1, p2, color);
 }
 
 void drawTriangleWireframe(
@@ -234,4 +233,27 @@ void drawTriangleWireframeProjected(
     drawLine(fb, (int)p0.screen.x, (int)p0.screen.y, (int)p1.screen.x, (int)p1.screen.y, color);
     drawLine(fb, (int)p1.screen.x, (int)p1.screen.y, (int)p2.screen.x, (int)p2.screen.y, color);
     drawLine(fb, (int)p2.screen.x, (int)p2.screen.y, (int)p0.screen.x, (int)p0.screen.y, color);
+}
+
+void drawMesh(
+    Framebuffer& fb,
+    const Mesh& mesh,
+    const Mat4& mvp,
+    uint32_t color
+)
+{
+    uint32_t triCount = mesh.getTriangleCount();
+    for (uint32_t i = 0; i < triCount; i++) {
+        Vertex v0, v1, v2;
+        mesh.getTriangle(i, v0, v1, v2);
+        
+        drawTriangleProjected(
+            fb,
+            mvp,
+            v0.position,
+            v1.position,
+            v2.position,
+            color
+        );
+    }
 }

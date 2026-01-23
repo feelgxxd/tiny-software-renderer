@@ -1,0 +1,10 @@
+^D:\FEELGXXD\TINY_SOFTWARE_RENDERER\BUILD\CMAKEFILES\61B39217436A113D3CD31A9ED6842A0D\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SD:/feelgxxd/tiny_software_renderer -BD:/feelgxxd/tiny_software_renderer/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/feelgxxd/tiny_software_renderer/build/SoftwareRenderer.slnx
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
