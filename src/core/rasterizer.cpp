@@ -1,5 +1,6 @@
 #include "rasterizer.h"
 #include <cstdlib>
+#include <cstdio>
 #include "math/vec3.h"
 #include "../math/math_utils.h"
 
@@ -42,6 +43,13 @@ static ProjectedVertex projectVertex(
     float ndcX = clip.x * out.invW;
     float ndcY = clip.y * out.invW;
     float ndcZ = clip.z * out.invW;
+
+    // DEBUG
+    static int debugCount2 = 0;
+    if (debugCount2++ < 2) {
+        printf("Vertex (%.2f, %.2f, %.2f) -> clipZ: %.3f, invW: %.3f, ndcZ: %.3f\n", 
+            v.x, v.y, v.z, clip.z, out.invW, ndcZ);
+    }
 
     out.screen.x = (ndcX + 1.0f) * 0.5f * width;
     out.screen.y = (1.0f - (ndcY + 1.0f) * 0.5f) * height;
@@ -182,7 +190,16 @@ void drawTriangleFilledProjected(
                     w1 * v1.ndcZ +
                     w2 * v2.ndcZ;
 
-                fb.setPixel(x, y, color);
+                static int debugCount = 0;
+                if (debugCount++ < 5) {
+                    printf("depth: %.3f, v0.ndcZ: %.3f, v1.ndcZ: %.3f, v2.ndcZ: %.3f\n", 
+                        depth, v0.ndcZ, v1.ndcZ, v2.ndcZ);
+                }
+
+                if (fb.testAndSetDepth(x, y, depth))
+                {
+                    fb.setPixel(x, y, color);
+                }
             }
         }
     }

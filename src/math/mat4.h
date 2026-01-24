@@ -44,15 +44,20 @@ struct Mat4 {
         return result;
     }
 
-    static Mat4 perspective(float fov, float aspect, float znear, float zfar) {
+    static Mat4 perspective(float fov, float aspect, float znear, float zfar)
+    {
         Mat4 r = {};
         float tanHalfFov = std::tan(fov * 0.5f);
 
         r.m[0][0] = 1.0f / (aspect * tanHalfFov);
         r.m[1][1] = 1.0f / tanHalfFov;
-        r.m[2][2] = zfar / (zfar - znear);
-        r.m[2][3] = 1.0f;
-        r.m[3][2] = (-znear * zfar) / (zfar - znear);
+
+        r.m[2][2] = -(zfar + znear) / (zfar - znear);
+        r.m[2][3] = -1.0f;
+
+        r.m[3][2] = -(2.0f * znear * zfar) / (zfar - znear);
+        r.m[3][3] = 0.0f;
+
         return r;
     }
 

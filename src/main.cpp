@@ -22,20 +22,22 @@ int main()
     drawTriangleProjected(
         fb,
         proj,
-        Vec3(-0.5f, -0.5f, -1.0f),
-        Vec3( 0.5f, -0.5f, -1.0f),
-        Vec3( 0.0f,  0.5f, -1.0f),
+        Vec3(-0.5f, -0.5f, -2.0f),
+        Vec3( 0.5f, -0.5f, -2.0f),
+        Vec3( 0.0f,  0.5f, -2.0f),
         0x00FF00
     );
 
     drawTriangleProjected(
         fb,
         proj,
-        Vec3(-0.3f, -0.3f, -0.8f),
-        Vec3( 0.7f, -0.3f, -0.8f),
-        Vec3( 0.2f,  0.7f, -0.8f),
+        Vec3(-0.3f, -0.3f, -3.0f),
+        Vec3( 0.7f, -0.3f, -3.0f),
+        Vec3( 0.2f,  0.7f, -3.0f),
         0xFF0000
     );
+
+    fb.drawDepthDebug();
 
     runWindow(fb);
 }

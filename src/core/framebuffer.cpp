@@ -38,3 +38,27 @@ bool Framebuffer::testAndSetDepth(int x, int y, float depth) {
 
     return false;
 }
+
+void Framebuffer::drawDepthDebug()
+{
+    for (int y = 0; y < m_height; y++)
+    {
+        for (int x = 0; x < m_width; x++)
+        {
+            float d = m_depth[y * m_width + x];
+
+            // clamp
+            if (d < 0.0f) d = 0.0f;
+            if (d > 1.0f) d = 1.0f;
+
+            uint8_t v = (uint8_t)((1.0f - d) * 255.0f);
+
+            uint32_t color =
+                (v << 16) |
+                (v << 8)  | 
+                 v;        
+
+            m_color[y * m_width + x] = color;
+        }
+    }
+}
