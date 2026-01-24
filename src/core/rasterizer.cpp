@@ -44,7 +44,6 @@ static ProjectedVertex projectVertex(
     float ndcY = clip.y * out.invW;
     float ndcZ = clip.z * out.invW;
 
-    // DEBUG
     static int debugCount2 = 0;
     if (debugCount2++ < 2) {
         printf("Vertex (%.2f, %.2f, %.2f) -> clipZ: %.3f, invW: %.3f, ndcZ: %.3f\n", 
@@ -185,10 +184,17 @@ void drawTriangleFilledProjected(
                 w1 /= area;
                 w2 /= area;
 
+                float invW =
+                    w0 * v0.invW +
+                    w1 * v1.invW +
+                    w2 * v2.invW;
+
                 float depth =
-                    w0 * v0.ndcZ +
-                    w1 * v1.ndcZ +
-                    w2 * v2.ndcZ;
+                (
+                    w0 * v0.ndcZ * v0.invW +
+                    w1 * v1.ndcZ * v1.invW +
+                    w2 * v2.ndcZ * v2.invW
+                ) / invW;
 
                 static int debugCount = 0;
                 if (debugCount++ < 5) {
