@@ -16,6 +16,7 @@ struct ProjectedVertex {
     float ndcZ;
 
     Vec3 worldPos;
+    Vec3 normal;
 };
 
 bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
@@ -81,6 +82,7 @@ static ProjectedVertex projectVertex(
     out.screen.z = 0.0f;
 
     out.worldPos = Vec3(world.x, world.y, world.z);
+    out.normal = normalize(Vec3(world.x, world.y, world.z));
 
     return out;
 }
@@ -175,7 +177,7 @@ void drawTriangleFilledProjected(
     // World space normal
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
-    Vec3 normal = normalize(cross(e1, e2));
+    //Vec3 normal = normalize(cross(e1, e2));
 
     // Light (world space)
     static float t = 0.0f;
@@ -238,11 +240,18 @@ void drawTriangleFilledProjected(
                     w2 * v2.ndcZ * v2.invW
                 ) / invW;
 
+                Vec3 interpNormal =
+                    normalize(
+                        v0.normal * w0 +
+                        v1.normal * w1 +
+                        v2.normal * w2
+                    );
+
+                uint32_t litColor =
+                    applyLight(interpNormal, lightDir, baseColor);
+
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    uint32_t litColor =
-                        applyLight(normal, lightDir, baseColor);
-
                     fb.setPixel(x, y, litColor);
                 }
             }
@@ -263,6 +272,17 @@ void drawTriangleProjected(
     ProjectedVertex p0 = projectVertex(v0, model, viewProj, fb.width(), fb.height());
     ProjectedVertex p1 = projectVertex(v1, model, viewProj, fb.width(), fb.height());
     ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
+
+    Vec3 faceNormal = normalize(
+        cross(
+            p1.worldPos - p0.worldPos,
+            p2.worldPos - p0.worldPos
+        )
+    );
+
+    p0.normal = faceNormal;
+    p1.normal = faceNormal;
+    p2.normal = faceNormal;
 
     drawTriangleFilledProjected(fb, p0, p1, p2, color);
 }
