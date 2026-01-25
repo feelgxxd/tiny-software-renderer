@@ -28,6 +28,26 @@ bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
     return normal.z <= 0;
 }
 
+static uint32_t applyLight(
+    const Vec3& normal,
+    const Vec3& lightDir,
+    uint32_t baseColor
+)
+{
+    float NdotL = dot(normal, lightDir);
+    NdotL = std::max(0.0f, NdotL);
+
+    uint8_t r = (baseColor >> 16) & 0xFF;
+    uint8_t g = (baseColor >> 8)  & 0xFF;
+    uint8_t b = (baseColor)       & 0xFF;
+
+    r = (uint8_t)(r * NdotL);
+    g = (uint8_t)(g * NdotL);
+    b = (uint8_t)(b * NdotL);
+
+    return (r << 16) | (g << 8) | b;
+}
+
 static ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& model,
@@ -149,38 +169,23 @@ void drawTriangleFilledProjected(
     const ProjectedVertex& v0,
     const ProjectedVertex& v1,
     const ProjectedVertex& v2,
-    uint32_t /*unused*/
+    uint32_t baseColor
 )
 {
+    // World space normal
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
     Vec3 normal = normalize(cross(e1, e2));
 
+    // Light (world space)
     static float t = 0.0f;
     t += 0.02f;
 
     Vec3 lightDir = normalize(Vec3(
         sinf(t),
-        0.5f,
+        0.7f,
         -cosf(t)
     ));
-
-    float cs = cosf(t);
-    float sn = sinf(t);
-
-    Vec3 rotatedNormal(
-        normal.x * cs + normal.z * sn,
-        normal.y,
-       -normal.x * sn + normal.z * cs
-    );
-
-    Vec3 n = normalize(rotatedNormal);
-
-    uint8_t r = (uint8_t)((n.x * 0.5f + 0.5f) * 255.0f);
-    uint8_t g = (uint8_t)((n.y * 0.5f + 0.5f) * 255.0f);
-    uint8_t b = (uint8_t)((n.z * 0.5f + 0.5f) * 255.0f);
-
-    uint32_t normalColor = (r << 16) | (g << 8) | b;
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
@@ -235,7 +240,10 @@ void drawTriangleFilledProjected(
 
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    fb.setPixel(x, y, normalColor);
+                    uint32_t litColor =
+                        applyLight(normal, lightDir, baseColor);
+
+                    fb.setPixel(x, y, litColor);
                 }
             }
         }
