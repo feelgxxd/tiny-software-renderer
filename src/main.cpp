@@ -5,45 +5,53 @@
 
 void runWindow(Framebuffer& fb);
 
-int main()
-{
-    Framebuffer fb(800, 600);
-    fb.clear(0x000000);
+static float t = 0.0f;
 
+void render(Framebuffer& fb)
+{
+    fb.clear(0x000000);
     fb.clearDepth(1.0f);
 
-    // Create projection matrix
+    t += 0.001f;
+
+    Mat4 rotation = Mat4::rotationY(t);
+
+    Mat4 translation1 = Mat4::translation(0.0f, 0.0f, -2.0f);
+    Mat4 model1 = Mat4::multiply(rotation, translation1);
+
+    Mat4 translation2 = Mat4::translation(0.8f, 0.0f, -3.0f);
+    Mat4 model2 = Mat4::multiply(rotation, translation2);
+
     Mat4 proj = Mat4::perspective(
         70.0f * 3.14159f / 180.0f,
         800.0f / 600.0f,
         0.1f,
         100.0f
     );
-    
-    // Create identity model matrix (no transformation)
-    Mat4 model = Mat4::identity();
-    
+
     drawTriangleProjected(
         fb,
-        model,
+        model1,
         proj,
-        Vec3(-0.5f, -0.5f, -2.0f),
-        Vec3( 0.5f, -0.5f, -2.0f),
-        Vec3( 0.0f,  0.5f, -2.0f),
+        Vec3(-0.5f, -0.5f, 0.0f),
+        Vec3( 0.5f, -0.5f, 0.0f),
+        Vec3( 0.0f,  0.5f, 0.0f),
         0x00FF00
     );
 
     drawTriangleProjected(
         fb,
-        model,
+        model2,
         proj,
-        Vec3(-0.3f, -0.3f, -3.0f),
-        Vec3( 0.7f, -0.3f, -3.0f),
-        Vec3( 0.2f,  0.7f, -3.0f),
+        Vec3(-0.4f, -0.4f, 0.0f),
+        Vec3( 0.4f, -0.4f, 0.0f),
+        Vec3( 0.0f,  0.6f, 0.0f),
         0xFF0000
     );
+}
 
-    fb.drawDepthDebug();
-
+int main()
+{
+    Framebuffer fb(800, 600);
     runWindow(fb);
 }

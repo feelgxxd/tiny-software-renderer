@@ -1,6 +1,8 @@
 #include <SDL.h>
 #include "core/framebuffer.h"
 
+void render(Framebuffer& fb);
+
 void runWindow(Framebuffer& fb)
 {
     SDL_Init(SDL_INIT_VIDEO);
@@ -32,6 +34,8 @@ void runWindow(Framebuffer& fb)
             if (e.type == SDL_QUIT)
                 running = false;
         }
+
+        render(fb);
 
         SDL_RenderClear(renderer);
 

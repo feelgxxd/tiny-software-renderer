@@ -99,4 +99,19 @@ struct Mat4 {
 
         return result;
     }
+
+    static Mat4 rotationY(float angle)
+    {
+        Mat4 r = identity();
+        float c = std::cos(angle);
+        float s = std::sin(angle);
+
+        r.m[0][0] =  c;
+        r.m[0][2] =  s;
+
+        r.m[2][0] = -s;
+        r.m[2][2] =  c;
+
+        return r;
+    }
 };

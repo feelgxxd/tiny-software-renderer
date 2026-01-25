@@ -149,12 +149,38 @@ void drawTriangleFilledProjected(
     const ProjectedVertex& v0,
     const ProjectedVertex& v1,
     const ProjectedVertex& v2,
-    uint32_t color
+    uint32_t /*unused*/
 )
 {
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
     Vec3 normal = normalize(cross(e1, e2));
+
+    static float t = 0.0f;
+    t += 0.02f;
+
+    Vec3 lightDir = normalize(Vec3(
+        sinf(t),
+        0.5f,
+        -cosf(t)
+    ));
+
+    float cs = cosf(t);
+    float sn = sinf(t);
+
+    Vec3 rotatedNormal(
+        normal.x * cs + normal.z * sn,
+        normal.y,
+       -normal.x * sn + normal.z * cs
+    );
+
+    Vec3 n = normalize(rotatedNormal);
+
+    uint8_t r = (uint8_t)((n.x * 0.5f + 0.5f) * 255.0f);
+    uint8_t g = (uint8_t)((n.y * 0.5f + 0.5f) * 255.0f);
+    uint8_t b = (uint8_t)((n.z * 0.5f + 0.5f) * 255.0f);
+
+    uint32_t normalColor = (r << 16) | (g << 8) | b;
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
@@ -173,20 +199,6 @@ void drawTriangleFilledProjected(
     int maxX = (int)std::ceil (std::max({ p0.x, p1.x, p2.x }));
     int minY = (int)std::floor(std::min({ p0.y, p1.y, p2.y }));
     int maxY = (int)std::ceil (std::max({ p0.y, p1.y, p2.y }));
-
-    static int frame = 0;
-    frame++;
-
-    Vec3 lightDir = normalize(Vec3(
-        sinf(frame * 0.01f),
-        0.0f,
-        -cosf(frame * 0.01f)
-    ));
-    
-    float ambient = 0.25f;
-    float diffuse = std::max(0.0f, dot(normal, lightDir));
-    float intensity = ambient + diffuse * 2.0f;
-    intensity = std::min(intensity, 1.0f);
 
     for (int y = minY; y <= maxY; y++) {
         for (int x = minX; x <= maxX; x++) {
@@ -221,20 +233,9 @@ void drawTriangleFilledProjected(
                     w2 * v2.ndcZ * v2.invW
                 ) / invW;
 
-                static int debugCount = 0;
-                if (debugCount++ < 5) {
-                    printf("depth: %.3f, v0.ndcZ: %.3f, v1.ndcZ: %.3f, v2.ndcZ: %.3f\n", 
-                        depth, v0.ndcZ, v1.ndcZ, v2.ndcZ);
-                }
-
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    uint8_t c = (uint8_t)(intensity * 255.0f * 2.0f);
-                    uint32_t litColor =
-                        ((uint8_t)(intensity * 255) << 16); // KIRMIZI
-                        //(c << 16) | (c << 8) | c;
-
-                    fb.setPixel(x, y, litColor);
+                    fb.setPixel(x, y, normalColor);
                 }
             }
         }
