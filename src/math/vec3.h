@@ -11,6 +11,10 @@ struct Vec3 {
         return Vec3(x - other.x, y - other.y, z - other.z);
     }
 
+    Vec3 operator-() const {
+        return Vec3(-x, -y, -z);
+    }
+
     Vec3 normalized() const {
         float len = std::sqrt(x * x + y * y + z * z);
         if (len == 0) return Vec3(0, 0, 0);

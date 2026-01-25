@@ -47,7 +47,6 @@ void Framebuffer::drawDepthDebug()
         {
             float d = m_depth[y * m_width + x];
 
-            // clamp
             if (d < 0.0f) d = 0.0f;
             if (d > 1.0f) d = 1.0f;
 

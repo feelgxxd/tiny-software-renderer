@@ -14,6 +14,8 @@ struct ProjectedVertex {
     Vec3 screen; 
     float invW;
     float ndcZ;
+
+    Vec3 worldPos;
 };
 
 bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
@@ -28,14 +30,17 @@ bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
 
 static ProjectedVertex projectVertex(
     const Vec3& v,
+    const Mat4& model,
     const Mat4& viewProj,
     int width,
     int height
 ) {
-    Vec4 clip = Mat4::multiply(
-        viewProj,
+    Vec4 world = Mat4::multiply(
+        model,
         Vec4(v.x, v.y, v.z, 1.0f)
     );
+
+    Vec4 clip = Mat4::multiply(viewProj, world);
 
     ProjectedVertex out;
     out.invW = 1.0f / clip.w;
@@ -54,6 +59,8 @@ static ProjectedVertex projectVertex(
     out.screen.y = (1.0f - (ndcY + 1.0f) * 0.5f) * height;
     out.ndcZ = (ndcZ + 1.0f) * 0.5f;
     out.screen.z = 0.0f;
+
+    out.worldPos = Vec3(world.x, world.y, world.z);
 
     return out;
 }
@@ -145,6 +152,10 @@ void drawTriangleFilledProjected(
     uint32_t color
 )
 {
+    Vec3 e1 = v1.worldPos - v0.worldPos;
+    Vec3 e2 = v2.worldPos - v0.worldPos;
+    Vec3 normal = normalize(cross(e1, e2));
+
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
     const Vec3& p2 = v2.screen;
@@ -162,6 +173,20 @@ void drawTriangleFilledProjected(
     int maxX = (int)std::ceil (std::max({ p0.x, p1.x, p2.x }));
     int minY = (int)std::floor(std::min({ p0.y, p1.y, p2.y }));
     int maxY = (int)std::ceil (std::max({ p0.y, p1.y, p2.y }));
+
+    static int frame = 0;
+    frame++;
+
+    Vec3 lightDir = normalize(Vec3(
+        sinf(frame * 0.01f),
+        0.0f,
+        -cosf(frame * 0.01f)
+    ));
+    
+    float ambient = 0.25f;
+    float diffuse = std::max(0.0f, dot(normal, lightDir));
+    float intensity = ambient + diffuse * 2.0f;
+    intensity = std::min(intensity, 1.0f);
 
     for (int y = minY; y <= maxY; y++) {
         for (int x = minX; x <= maxX; x++) {
@@ -204,7 +229,12 @@ void drawTriangleFilledProjected(
 
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    fb.setPixel(x, y, color);
+                    uint8_t c = (uint8_t)(intensity * 255.0f * 2.0f);
+                    uint32_t litColor =
+                        ((uint8_t)(intensity * 255) << 16); // KIRMIZI
+                        //(c << 16) | (c << 8) | c;
+
+                    fb.setPixel(x, y, litColor);
                 }
             }
         }
@@ -213,6 +243,7 @@ void drawTriangleFilledProjected(
 
 void drawTriangleProjected(
     Framebuffer& fb,
+    const Mat4& model,
     const Mat4& viewProj,
     const Vec3& v0,
     const Vec3& v1,
@@ -220,9 +251,9 @@ void drawTriangleProjected(
     uint32_t color
 )
 {
-    ProjectedVertex p0 = projectVertex(v0, viewProj, fb.width(), fb.height());
-    ProjectedVertex p1 = projectVertex(v1, viewProj, fb.width(), fb.height());
-    ProjectedVertex p2 = projectVertex(v2, viewProj, fb.width(), fb.height());
+    ProjectedVertex p0 = projectVertex(v0, model, viewProj, fb.width(), fb.height());
+    ProjectedVertex p1 = projectVertex(v1, model, viewProj, fb.width(), fb.height());
+    ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
 
     drawTriangleFilledProjected(fb, p0, p1, p2, color);
 }
@@ -242,6 +273,7 @@ void drawTriangleWireframe(
 
 void drawTriangleWireframeProjected(
     Framebuffer& fb,
+    const Mat4& model,
     const Mat4& proj,
     Vec3 v0,
     Vec3 v1,
@@ -249,9 +281,9 @@ void drawTriangleWireframeProjected(
     uint32_t color
 )
 {
-    ProjectedVertex p0 = projectVertex(v0, proj, fb.width(), fb.height());
-    ProjectedVertex p1 = projectVertex(v1, proj, fb.width(), fb.height());
-    ProjectedVertex p2 = projectVertex(v2, proj, fb.width(), fb.height());
+    ProjectedVertex p0 = projectVertex(v0, model, proj, fb.width(), fb.height());
+    ProjectedVertex p1 = projectVertex(v1, model, proj, fb.width(), fb.height());
+    ProjectedVertex p2 = projectVertex(v2, model, proj, fb.width(), fb.height());
 
     drawLine(fb, (int)p0.screen.x, (int)p0.screen.y, (int)p1.screen.x, (int)p1.screen.y, color);
     drawLine(fb, (int)p1.screen.x, (int)p1.screen.y, (int)p2.screen.x, (int)p2.screen.y, color);
@@ -261,7 +293,8 @@ void drawTriangleWireframeProjected(
 void drawMesh(
     Framebuffer& fb,
     const Mesh& mesh,
-    const Mat4& mvp,
+    const Mat4& model,
+    const Mat4& viewProj,
     uint32_t color
 )
 {
@@ -269,10 +302,11 @@ void drawMesh(
     for (uint32_t i = 0; i < triCount; i++) {
         Vertex v0, v1, v2;
         mesh.getTriangle(i, v0, v1, v2);
-        
+
         drawTriangleProjected(
             fb,
-            mvp,
+            model,
+            viewProj,
             v0.position,
             v1.position,
             v2.position,

@@ -12,6 +12,7 @@ int main()
 
     fb.clearDepth(1.0f);
 
+    // Create projection matrix
     Mat4 proj = Mat4::perspective(
         70.0f * 3.14159f / 180.0f,
         800.0f / 600.0f,
@@ -19,8 +20,12 @@ int main()
         100.0f
     );
     
+    // Create identity model matrix (no transformation)
+    Mat4 model = Mat4::identity();
+    
     drawTriangleProjected(
         fb,
+        model,
         proj,
         Vec3(-0.5f, -0.5f, -2.0f),
         Vec3( 0.5f, -0.5f, -2.0f),
@@ -30,6 +35,7 @@ int main()
 
     drawTriangleProjected(
         fb,
+        model,
         proj,
         Vec3(-0.3f, -0.3f, -3.0f),
         Vec3( 0.7f, -0.3f, -3.0f),
