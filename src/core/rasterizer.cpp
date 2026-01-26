@@ -32,21 +32,29 @@ bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
 static uint32_t applyLight(
     const Vec3& normal,
     const Vec3& lightDir,
+    const Vec3& viewDir,
     uint32_t baseColor
 )
 {
     Vec3 N = normalize(normal);
     Vec3 L = normalize(lightDir);
+    Vec3 V = normalize(viewDir);
 
     float NdotL = std::max(0.0f, dot(N, L));
 
-    // Ambient + diffuse
-    float intensity = 0.25f + 0.75f * NdotL;
-    intensity = std::min(intensity, 1.0f);
+    Vec3 H = normalize(L + V);
+    float NdotH = std::max(0.0f, dot(N, H));
 
-    uint8_t r = ((baseColor >> 16) & 0xFF) * intensity;
-    uint8_t g = ((baseColor >> 8)  & 0xFF) * intensity;
-    uint8_t b = ( baseColor        & 0xFF) * intensity;
+    float shininess = 32.0f;
+    float specularStrength = 0.5f;
+
+    float spec = powf(NdotH, shininess) * specularStrength;
+
+    float intensity = std::min(NdotL + spec, 1.0f);
+
+    uint8_t r = uint8_t(((baseColor >> 16) & 0xFF) * intensity);
+    uint8_t g = uint8_t(((baseColor >> 8)  & 0xFF) * intensity);
+    uint8_t b = uint8_t(( baseColor        & 0xFF) * intensity);
 
     return (r << 16) | (g << 8) | b;
 }
@@ -277,7 +285,7 @@ void drawTriangleFilledProjected(
                     Vec3 viewDir = Vec3(0, 0, 1);
 
                     uint32_t litColor =
-                      applyLight(interpNormal, lightDir, baseColor);
+                      applyLight(interpNormal, lightDir, viewDir, baseColor);
 
                     //if (fb.testAndSetDepth(x, y, depth))
                     {

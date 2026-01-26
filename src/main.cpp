@@ -22,6 +22,12 @@ void render(Framebuffer& fb)
     Mat4 translation2 = Mat4::translation(0.8f, 0.0f, -3.0f);
     Mat4 model2 = Mat4::multiply(rotation, translation2);
 
+    Vec3 camPos    = Vec3(0.0f, 0.0f, 0.0f);
+    Vec3 camTarget = Vec3(0.0f, 0.0f, -1.0f);
+    Vec3 camUp     = Vec3(0.0f, 1.0f, 0.0f);
+
+    Mat4 view = Mat4::lookAt(camPos, camTarget, camUp);
+
     Mat4 proj = Mat4::perspective(
         70.0f * 3.14159f / 180.0f,
         800.0f / 600.0f,
@@ -29,10 +35,12 @@ void render(Framebuffer& fb)
         100.0f
     );
 
+    Mat4 viewProj = Mat4::multiply(proj, view);
+
     drawTriangleProjected(
         fb,
         model1,
-        proj,
+        viewProj,
         Vec3(-0.5f, -0.5f, 0.0f),
         Vec3( 0.5f, -0.5f, 0.0f),
         Vec3( 0.0f,  0.5f, 0.0f),
@@ -42,7 +50,7 @@ void render(Framebuffer& fb)
     drawTriangleProjected(
         fb,
         model2,
-        proj,
+        viewProj,
         Vec3(-0.4f, -0.4f, 0.0f),
         Vec3( 0.4f, -0.4f, 0.0f),
         Vec3( 0.0f,  0.6f, 0.0f),
