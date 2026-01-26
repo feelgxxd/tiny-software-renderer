@@ -88,8 +88,8 @@ static ProjectedVertex projectVertex(
     out.screen.z = 0.0f;
 
     out.worldPos = Vec3(world.x, world.y, world.z);
-    out.normal = Vec3(0, 0, 1);
-    //out.normal = normalize(Vec3(world.x, world.y, world.z));
+    //out.normal = Vec3(0, 0, 1);
+    out.normal = normalize(Vec3(world.x, world.y, world.z));
 
     return out;
 }
@@ -303,7 +303,7 @@ void drawTriangleProjected(
     ProjectedVertex p1 = projectVertex(v1, model, viewProj, fb.width(), fb.height());
     ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
 
-    Vec3 faceNormal = normalize(
+    /*Vec3 faceNormal = normalize(
         cross(
             p1.worldPos - p0.worldPos,
             p2.worldPos - p0.worldPos
@@ -312,7 +312,7 @@ void drawTriangleProjected(
 
     p0.normal = faceNormal;
     p1.normal = faceNormal;
-    p2.normal = faceNormal;
+    p2.normal = faceNormal;*/
 
     drawTriangleFilledProjected(fb, p0, p1, p2, color);
 }
