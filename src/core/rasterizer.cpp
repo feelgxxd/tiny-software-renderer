@@ -32,19 +32,24 @@ bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
 static uint32_t applyLight(
     const Vec3& normal,
     const Vec3& lightDir,
+    const Vec3& viewDir,
     uint32_t baseColor
 )
 {
-    float NdotL = dot(normal, lightDir);
-    NdotL = std::max(0.0f, NdotL);
+    float NdotL = std::max(0.0f, dot(normal, lightDir));
 
-    uint8_t r = (baseColor >> 16) & 0xFF;
-    uint8_t g = (baseColor >> 8)  & 0xFF;
-    uint8_t b = (baseColor)       & 0xFF;
+    Vec3 reflectDir =
+        normalize(normal * (2.0f * NdotL) - lightDir);
 
-    r = (uint8_t)(r * NdotL);
-    g = (uint8_t)(g * NdotL);
-    b = (uint8_t)(b * NdotL);
+    float spec =
+        powf(std::max(dot(viewDir, reflectDir), 0.0f), 16.0f);
+
+    float intensity = NdotL + spec * 0.5f;
+    intensity = std::min(intensity, 1.0f);
+
+    uint8_t r = ((baseColor >> 16) & 0xFF) * intensity;
+    uint8_t g = ((baseColor >> 8)  & 0xFF) * intensity;
+    uint8_t b = ( baseColor        & 0xFF) * intensity;
 
     return (r << 16) | (g << 8) | b;
 }
@@ -62,6 +67,10 @@ static ProjectedVertex projectVertex(
     );
 
     Vec4 clip = Mat4::multiply(viewProj, world);
+
+    if (clip.w <= 0.0f) {
+        printf("CLIP W <= 0 !!! w = %.3f\n", clip.w);
+    }
 
     ProjectedVertex out;
     out.invW = 1.0f / clip.w;
@@ -82,7 +91,8 @@ static ProjectedVertex projectVertex(
     out.screen.z = 0.0f;
 
     out.worldPos = Vec3(world.x, world.y, world.z);
-    out.normal = normalize(Vec3(world.x, world.y, world.z));
+    out.normal = Vec3(0, 0, 1);
+    //out.normal = normalize(Vec3(world.x, world.y, world.z));
 
     return out;
 }
@@ -174,20 +184,18 @@ void drawTriangleFilledProjected(
     uint32_t baseColor
 )
 {
+    fb.setPixel(100, 100, 0xFFFFFF);
+    
     // World space normal
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
     //Vec3 normal = normalize(cross(e1, e2));
 
     // Light (world space)
-    static float t = 0.0f;
-    t += 0.02f;
+    //static float t = 0.0f;
+    //t += 0.02f;
 
-    Vec3 lightDir = normalize(Vec3(
-        sinf(t),
-        0.7f,
-        -cosf(t)
-    ));
+    Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
@@ -206,6 +214,14 @@ void drawTriangleFilledProjected(
     int maxX = (int)std::ceil (std::max({ p0.x, p1.x, p2.x }));
     int minY = (int)std::floor(std::min({ p0.y, p1.y, p2.y }));
     int maxY = (int)std::ceil (std::max({ p0.y, p1.y, p2.y }));
+
+    minX = std::max(minX, 0);
+    minY = std::max(minY, 0);
+    maxX = std::min(maxX, fb.width()  - 1);
+    maxY = std::min(maxY, fb.height() - 1);
+
+    if (minX > maxX || minY > maxY)
+        return;
 
     for (int y = minY; y <= maxY; y++) {
         for (int x = minX; x <= maxX; x++) {
@@ -240,19 +256,29 @@ void drawTriangleFilledProjected(
                     w2 * v2.ndcZ * v2.invW
                 ) / invW;
 
-                Vec3 interpNormal =
-                    normalize(
+                if (fb.testAndSetDepth(x, y, depth))
+                {
+                    Vec3 interpNormal = normalize(
                         v0.normal * w0 +
                         v1.normal * w1 +
                         v2.normal * w2
                     );
 
-                uint32_t litColor =
-                    applyLight(interpNormal, lightDir, baseColor);
+                    /*Vec3 viewDir = normalize(-(
+                        v0.worldPos * w0 +
+                        v1.worldPos * w1 +
+                        v2.worldPos * w2
+                    ));*/
 
-                if (fb.testAndSetDepth(x, y, depth))
-                {
-                    fb.setPixel(x, y, litColor);
+                    Vec3 viewDir = Vec3(0, 0, 1);
+
+                    uint32_t litColor =
+                        applyLight(interpNormal, lightDir, viewDir, baseColor);
+
+                    //if (fb.testAndSetDepth(x, y, depth))
+                    {
+                        fb.setPixel(x, y, litColor);
+                    }
                 }
             }
         }

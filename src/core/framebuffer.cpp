@@ -1,5 +1,6 @@
 #include "framebuffer.h"
 #include <algorithm>
+#include <cfloat>
 
 Framebuffer::Framebuffer(int w, int h)
     : m_width(w), m_height(h)
@@ -11,6 +12,7 @@ Framebuffer::Framebuffer(int w, int h)
 void Framebuffer::clear(uint32_t color)
 {
     std::fill(m_color.begin(), m_color.end(), color);
+    std::fill(m_depth.begin(), m_depth.end(), FLT_MAX);
 }
 
 void Framebuffer::clearDepth(float depth) {

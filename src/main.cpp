@@ -9,7 +9,7 @@ static float t = 0.0f;
 
 void render(Framebuffer& fb)
 {
-    fb.clear(0x000000);
+    fb.clear(0xFFFFFF);
     fb.clearDepth(1.0f);
 
     t += 0.001f;
