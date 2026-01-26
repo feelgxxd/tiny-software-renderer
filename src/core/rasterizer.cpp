@@ -32,19 +32,16 @@ bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
 static uint32_t applyLight(
     const Vec3& normal,
     const Vec3& lightDir,
-    const Vec3& viewDir,
     uint32_t baseColor
 )
 {
-    float NdotL = std::max(0.0f, dot(normal, lightDir));
+    Vec3 N = normalize(normal);
+    Vec3 L = normalize(lightDir);
 
-    Vec3 reflectDir =
-        normalize(normal * (2.0f * NdotL) - lightDir);
+    float NdotL = std::max(0.0f, dot(N, L));
 
-    float spec =
-        powf(std::max(dot(viewDir, reflectDir), 0.0f), 16.0f);
-
-    float intensity = NdotL + spec * 0.5f;
+    // Ambient + diffuse
+    float intensity = 0.25f + 0.75f * NdotL;
     intensity = std::min(intensity, 1.0f);
 
     uint8_t r = ((baseColor >> 16) & 0xFF) * intensity;
@@ -184,8 +181,6 @@ void drawTriangleFilledProjected(
     uint32_t baseColor
 )
 {
-    fb.setPixel(100, 100, 0xFFFFFF);
-    
     // World space normal
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
@@ -195,7 +190,16 @@ void drawTriangleFilledProjected(
     //static float t = 0.0f;
     //t += 0.02f;
 
-    Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
+    //Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
+
+    static float lt = 0.0f;
+    lt += 0.02f;
+
+    Vec3 lightDir = normalize(Vec3(
+        sinf(lt),
+        0.5f,
+        cosf(lt)
+    ));
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
@@ -273,7 +277,7 @@ void drawTriangleFilledProjected(
                     Vec3 viewDir = Vec3(0, 0, 1);
 
                     uint32_t litColor =
-                        applyLight(interpNormal, lightDir, viewDir, baseColor);
+                      applyLight(interpNormal, lightDir, baseColor);
 
                     //if (fb.testAndSetDepth(x, y, depth))
                     {
