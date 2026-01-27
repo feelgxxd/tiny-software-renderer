@@ -27,6 +27,7 @@ void drawTriangleProjected(
     Framebuffer& fb,
     const Mat4& model,
     const Mat4& viewProj,
+    const Vec3& camPos,
     const Vec3& v0,
     const Vec3& v1,
     const Vec3& v2,

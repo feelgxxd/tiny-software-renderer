@@ -297,6 +297,7 @@ void drawTriangleProjected(
     Framebuffer& fb,
     const Mat4& model,
     const Mat4& viewProj,
+    const Vec3& camPos,
     const Vec3& v0,
     const Vec3& v1,
     const Vec3& v2,
@@ -313,6 +314,11 @@ void drawTriangleProjected(
             p2.worldPos - p0.worldPos
         )
     );
+
+    Vec3 viewDir = normalize(camPos - p0.worldPos);
+
+    if(dot(faceNormal, viewDir) <= 0)
+        return; // Backface culling
 
     p0.normal = faceNormal;
     p1.normal = faceNormal;
@@ -358,6 +364,7 @@ void drawMesh(
     const Mesh& mesh,
     const Mat4& model,
     const Mat4& viewProj,
+    const Vec3& camPos,
     uint32_t color
 )
 {
@@ -370,6 +377,7 @@ void drawMesh(
             fb,
             model,
             viewProj,
+            camPos,
             v0.position,
             v1.position,
             v2.position,
