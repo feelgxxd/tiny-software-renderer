@@ -40,21 +40,22 @@ static uint32_t applyLight(
     Vec3 L = normalize(lightDir);
     Vec3 V = normalize(viewDir);
 
-    float NdotL = std::max(0.0f, dot(N, L));
+    // Ambient
+    float ambient = 0.15f;
 
+    // Diffuse
+    float diff = std::max(dot(N, L), 0.0f);
+
+    // Blinn–Phong
     Vec3 H = normalize(L + V);
-    float NdotH = std::max(0.0f, dot(N, H));
+    float spec = powf(std::max(dot(N, H), 0.0f), 32.0f);
 
-    float shininess = 32.0f;
-    float specularStrength = 0.5f;
+    float intensity = ambient + diff + spec * 0.5f;
+    intensity = std::min(intensity, 1.0f);
 
-    float spec = powf(NdotH, shininess) * specularStrength;
-
-    float intensity = std::min(NdotL + spec, 1.0f);
-
-    uint8_t r = uint8_t(((baseColor >> 16) & 0xFF) * intensity);
-    uint8_t g = uint8_t(((baseColor >> 8)  & 0xFF) * intensity);
-    uint8_t b = uint8_t(( baseColor        & 0xFF) * intensity);
+    uint8_t r = ((baseColor >> 16) & 0xFF) * intensity;
+    uint8_t g = ((baseColor >> 8)  & 0xFF) * intensity;
+    uint8_t b = ( baseColor        & 0xFF) * intensity;
 
     return (r << 16) | (g << 8) | b;
 }
@@ -198,16 +199,16 @@ void drawTriangleFilledProjected(
     //static float t = 0.0f;
     //t += 0.02f;
 
-    //Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
+    Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
 
     static float lt = 0.0f;
     lt += 0.02f;
 
-    Vec3 lightDir = normalize(Vec3(
+    /*Vec3 lightDir = normalize(Vec3(
         sinf(lt),
         0.5f,
         cosf(lt)
-    ));
+    ));*/
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
