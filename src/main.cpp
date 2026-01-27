@@ -22,8 +22,8 @@ void render(Framebuffer& fb)
     Mat4 translation2 = Mat4::translation(0.8f, 0.0f, -3.0f);
     Mat4 model2 = Mat4::multiply(rotation, translation2);
 
-    Vec3 camPos    = Vec3(0.0f, 0.0f, 0.0f);
-    Vec3 camTarget = Vec3(0.0f, 0.0f, -1.0f);
+    Vec3 camPos    = Vec3(0.0f, 0.0f, 3.0f);
+    Vec3 camTarget = Vec3(0.0f, 0.0f, 0.0f);
     Vec3 camUp     = Vec3(0.0f, 1.0f, 0.0f);
 
     Mat4 view = Mat4::lookAt(camPos, camTarget, camUp);

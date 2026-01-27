@@ -76,25 +76,31 @@ struct Mat4 {
         return r;
     }
 
-    static Mat4 lookAt(const Vec3& eye, const Vec3& target, const Vec3& up)
+    static Mat4 lookAt(const Vec3& eye, const Vec3& center, const Vec3& up)
     {
-        Vec3 z = normalize(eye - target);   // forward
-        Vec3 x = normalize(cross(up, z));   // right
-        Vec3 y = cross(z, x);                // up
+        Vec3 f = (center - eye).normalized();   // forward
+        Vec3 s = cross(f, up).normalized();     // right
+        Vec3 u = cross(s, f);                   // true up
 
-        Mat4 m = Mat4::identity();
+        Mat4 result = Mat4::identity();
 
-        // rotation
-        m.m[0][0] = x.x; m.m[0][1] = x.y; m.m[0][2] = x.z;
-        m.m[1][0] = y.x; m.m[1][1] = y.y; m.m[1][2] = y.z;
-        m.m[2][0] = z.x; m.m[2][1] = z.y; m.m[2][2] = z.z;
+        result.m[0][0] =  s.x;
+        result.m[1][0] =  s.y;
+        result.m[2][0] =  s.z;
 
-        // translation
-        m.m[0][3] = -dot(x, eye);
-        m.m[1][3] = -dot(y, eye);
-        m.m[2][3] = -dot(z, eye);
+        result.m[0][1] =  u.x;
+        result.m[1][1] =  u.y;
+        result.m[2][1] =  u.z;
 
-        return m;
+        result.m[0][2] = -f.x;
+        result.m[1][2] = -f.y;
+        result.m[2][2] = -f.z;
+
+        result.m[3][0] = -dot(s, eye);
+        result.m[3][1] = -dot(u, eye);
+        result.m[3][2] =  dot(f, eye);
+
+        return result;
     }
 
     static Mat4 rotationY(float angle)

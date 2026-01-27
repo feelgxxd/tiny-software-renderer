@@ -37,20 +37,14 @@ static uint32_t applyLight(
 )
 {
     Vec3 N = normalize(normal);
-    Vec3 L = normalize(lightDir);
-    Vec3 V = normalize(viewDir);
-
-    // Ambient
-    float ambient = 0.15f;
+    Vec3 L = normalize(Vec3(0.4f, 0.6f, -1.0f));
 
     // Diffuse
-    float diff = std::max(dot(N, L), 0.0f);
+    float NdotL = std::max(0.0f, dot(N, -L));
+    float diff = NdotL;
 
     // Blinn–Phong
-    Vec3 H = normalize(L + V);
-    float spec = powf(std::max(dot(N, H), 0.0f), 32.0f);
-
-    float intensity = ambient + diff + spec * 0.5f;
+    float intensity = NdotL;
     intensity = std::min(intensity, 1.0f);
 
     uint8_t r = ((baseColor >> 16) & 0xFF) * intensity;
@@ -74,9 +68,9 @@ static ProjectedVertex projectVertex(
 
     Vec4 clip = Mat4::multiply(viewProj, world);
 
-    if (clip.w <= 0.0f) {
+    /*if (clip.w <= 0.0f) {
         printf("CLIP W <= 0 !!! w = %.3f\n", clip.w);
-    }
+    }*/
 
     ProjectedVertex out;
     out.invW = 1.0f / clip.w;
@@ -97,8 +91,8 @@ static ProjectedVertex projectVertex(
     out.screen.z = 0.0f;
 
     out.worldPos = Vec3(world.x, world.y, world.z);
-    //out.normal = Vec3(0, 0, 1);
-    out.normal = normalize(Vec3(world.x, world.y, world.z));
+    out.normal = Vec3(0, 0, 1);
+    //out.normal = normalize(Vec3(world.x, world.y, world.z));
 
     return out;
 }
@@ -199,7 +193,8 @@ void drawTriangleFilledProjected(
     //static float t = 0.0f;
     //t += 0.02f;
 
-    Vec3 lightDir = normalize(Vec3(0.3f, 0.8f, -0.5f));
+    Vec3 lightDir = normalize(Vec3(0, 0, -1));
+    Vec3 lightDirWorld = normalize(Vec3(0.0f, 0.0f, -1.0f));
 
     static float lt = 0.0f;
     lt += 0.02f;
@@ -312,7 +307,7 @@ void drawTriangleProjected(
     ProjectedVertex p1 = projectVertex(v1, model, viewProj, fb.width(), fb.height());
     ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
 
-    /*Vec3 faceNormal = normalize(
+    Vec3 faceNormal = normalize(
         cross(
             p1.worldPos - p0.worldPos,
             p2.worldPos - p0.worldPos
@@ -321,7 +316,7 @@ void drawTriangleProjected(
 
     p0.normal = faceNormal;
     p1.normal = faceNormal;
-    p2.normal = faceNormal;*/
+    p2.normal = faceNormal;
 
     drawTriangleFilledProjected(fb, p0, p1, p2, color);
 }
