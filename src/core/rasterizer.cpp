@@ -3,6 +3,7 @@
 #include <cstdio>
 #include "math/vec3.h"
 #include "../math/math_utils.h"
+#include <algorithm>
 
 float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c)
 {
@@ -309,22 +310,34 @@ void drawTriangleProjected(
     ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
 
     Vec3 faceNormal = normalize(
-        cross(
-            p1.worldPos - p0.worldPos,
-            p2.worldPos - p0.worldPos
-        )
+        cross(v1 - v0, v2 - v0)
     );
 
-    Vec3 viewDir = normalize(camPos - p0.worldPos);
+    Vec3 viewDir = normalize(camPos - v0);
 
-    if(dot(faceNormal, viewDir) <= 0)
+    if(dot(faceNormal, viewDir) <= 0.001f)
         return; // Backface culling
+
+    Vec3 lightDir = normalize(Vec3(0.5f, -0.8f, 0.2f)); // dünya yönü
+        
+    float lightIntensity = 0.7f;
+    float diff = std::clamp(dot(faceNormal, lightDir), 0.0f, 1.0f) * lightIntensity;
+
+    float ambient = 0.3f;
+    //float lighting = ambient + diff;
+    float lighting = std::clamp(ambient + diff * 0.7f, 0.0f, 1.0f);
+
+    uint8_t r = ((color >> 16) & 0xFF) * lighting;
+    uint8_t g = ((color >> 8 ) & 0xFF) * lighting;
+    uint8_t b = ((color      ) & 0xFF) * lighting;
+
+    uint32_t litColor = (r << 16) | (g << 8) | b;
 
     p0.normal = faceNormal;
     p1.normal = faceNormal;
     p2.normal = faceNormal;
 
-    drawTriangleFilledProjected(fb, p0, p1, p2, color);
+    drawTriangleFilledProjected(fb, p0, p1, p2, litColor);
 }
 
 void drawTriangleWireframe(
