@@ -267,11 +267,8 @@ void drawTriangleFilledProjected(
 
                 if (fb.testAndSetDepth(x, y, depth))
                 {
-                    Vec3 interpNormal = normalize(
-                        v0.normal * w0 +
-                        v1.normal * w1 +
-                        v2.normal * w2
-                    );
+                   Vec3 faceNormal = normalize(cross(e1, e2));
+                   Vec3 interpNormal = faceNormal;
 
                     /*Vec3 viewDir = normalize(-(
                         v0.worldPos * w0 +
@@ -294,51 +291,54 @@ void drawTriangleFilledProjected(
     }
 }
 
-void drawTriangleProjected(
+/*void drawTriangleProjected(
     Framebuffer& fb,
-    const Mat4& model,
-    const Mat4& viewProj,
-    const Vec3& camPos,
-    const Vec3& v0,
-    const Vec3& v1,
-    const Vec3& v2,
-    uint32_t color
-)
-{
-    ProjectedVertex p0 = projectVertex(v0, model, viewProj, fb.width(), fb.height());
-    ProjectedVertex p1 = projectVertex(v1, model, viewProj, fb.width(), fb.height());
-    ProjectedVertex p2 = projectVertex(v2, model, viewProj, fb.width(), fb.height());
+    const ProjectedVertex& v0,
+    const ProjectedVertex& v1,
+    const ProjectedVertex& v2,
+    uint32_t baseColor
+) {
+    Vec3 p0 = v0.worldPos;
+    Vec3 p1 = v1.worldPos;
+    Vec3 p2 = v2.worldPos;
 
     Vec3 faceNormal = normalize(
-        cross(v1 - v0, v2 - v0)
+        cross(p1 - p0, p2 - p0)
     );
 
-    Vec3 viewDir = normalize(camPos - v0);
+    Vec3 viewDir = normalize(-p0);
 
-    if(dot(faceNormal, viewDir) <= 0.001f)
-        return; // Backface culling
+    if (dot(faceNormal, viewDir) <= 0.0f)
+        return;
 
-    Vec3 lightDir = normalize(Vec3(0.5f, -0.8f, 0.2f)); // dünya yönü
-        
-    float lightIntensity = 0.7f;
-    float diff = std::clamp(dot(faceNormal, lightDir), 0.0f, 1.0f) * lightIntensity;
+    Vec3 lightDir = normalize(Vec3(0.4f, 0.8f, 0.2f));
 
-    float ambient = 0.3f;
-    //float lighting = ambient + diff;
-    float lighting = std::clamp(ambient + diff * 0.7f, 0.0f, 1.0f);
+    float ambient = 0.25f;
+    float diff = std::clamp(dot(faceNormal, lightDir), 0.0f, 1.0f);
 
-    uint8_t r = ((color >> 16) & 0xFF) * lighting;
-    uint8_t g = ((color >> 8 ) & 0xFF) * lighting;
-    uint8_t b = ((color      ) & 0xFF) * lighting;
+    float lighting = std::clamp(
+        ambient + diff * 0.75f,
+        0.0f,
+        1.0f
+    );
 
-    uint32_t litColor = (r << 16) | (g << 8) | b;
+    uint8_t r = uint8_t(((baseColor >> 16) & 0xFF) * lighting);
+    uint8_t g = uint8_t(((baseColor >> 8 ) & 0xFF) * lighting);
+    uint8_t b = uint8_t(((baseColor      ) & 0xFF) * lighting);
 
-    p0.normal = faceNormal;
-    p1.normal = faceNormal;
-    p2.normal = faceNormal;
+    uint32_t litColor =
+        (r << 16) |
+        (g << 8 ) |
+        (b);
 
-    drawTriangleFilledProjected(fb, p0, p1, p2, litColor);
-}
+    drawTriangleFilledProjected(
+        fb,
+        v0,
+        v1,
+        v2,
+        litColor
+    );
+}*/
 
 void drawTriangleWireframe(
     Framebuffer& fb,
@@ -377,23 +377,29 @@ void drawMesh(
     const Mesh& mesh,
     const Mat4& model,
     const Mat4& viewProj,
-    const Vec3& camPos,
     uint32_t color
-)
-{
+) {
     uint32_t triCount = mesh.getTriangleCount();
+
     for (uint32_t i = 0; i < triCount; i++) {
         Vertex v0, v1, v2;
         mesh.getTriangle(i, v0, v1, v2);
 
-        drawTriangleProjected(
+        ProjectedVertex pv0 = projectVertex(
+            v0.position, model, viewProj, fb.width(), fb.height()
+        );
+        ProjectedVertex pv1 = projectVertex(
+            v1.position, model, viewProj, fb.width(), fb.height()
+        );
+        ProjectedVertex pv2 = projectVertex(
+            v2.position, model, viewProj, fb.width(), fb.height()
+        );
+
+        drawTriangleFilledProjected(
             fb,
-            model,
-            viewProj,
-            camPos,
-            v0.position,
-            v1.position,
-            v2.position,
+            pv0,
+            pv1,
+            pv2,
             color
         );
     }

@@ -37,26 +37,22 @@ void render(Framebuffer& fb)
 
     Mat4 viewProj = Mat4::multiply(proj, view);
 
-    drawTriangleProjected(
-        fb,
-        model1,
-        viewProj,
-        camPos,
-        Vec3(-0.5f, -0.5f, 0.0f),
-        Vec3( 0.5f, -0.5f, 0.0f),
-        Vec3( 0.0f,  0.5f, 0.0f),
-        0x00FF00
+    ProjectedVertex pv0 = projectVertex(
+        Vec3(-0.5f, -0.5f, 0.0f), model1, viewProj, fb.width(), fb.height()
+    );
+    ProjectedVertex pv1 = projectVertex(
+        Vec3( 0.5f, -0.5f, 0.0f), model1, viewProj, fb.width(), fb.height()
+    );
+    ProjectedVertex pv2 = projectVertex(
+        Vec3( 0.0f,  0.5f, 0.0f), model1, viewProj, fb.width(), fb.height()
     );
 
-    drawTriangleProjected(
+    drawTriangleFilledProjected(
         fb,
-        model2,
-        viewProj,
-        camPos,
-        Vec3(-0.4f, -0.4f, 0.0f),
-        Vec3( 0.4f, -0.4f, 0.0f),
-        Vec3( 0.0f,  0.6f, 0.0f),
-        0xFF0000
+        pv0,
+        pv1,
+        pv2,
+        0x00FF00
     );
 }
 
