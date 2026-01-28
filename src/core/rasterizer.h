@@ -39,7 +39,7 @@ void drawTriangleFilled(
     uint32_t color
 );
 
-void drawTriangleProjected(
+/*void drawTriangleProjected(
     Framebuffer& fb,
     const Mat4& model,
     const Mat4& viewProj,
@@ -48,7 +48,7 @@ void drawTriangleProjected(
     const Vec3& v1,
     const Vec3& v2,
     uint32_t color
-);
+);*/
 
 void drawTriangleFilledProjected(
     Framebuffer& fb,
@@ -68,6 +68,7 @@ void drawTriangleWireframe(
 
 void drawTriangleWireframeProjected(
     Framebuffer& fb,
+    const Mat4& model,
     const Mat4& proj,
     Vec3 v0,
     Vec3 v1,
@@ -76,8 +77,9 @@ void drawTriangleWireframeProjected(
 );
 
 void drawMesh(
-    Framebuffer& fb,
+   Framebuffer& fb,
     const Mesh& mesh,
-    const Mat4& mvp,
-    uint32_t color = 0xFFFFFF
+    const Mat4& model,
+    const Mat4& viewProj,
+    uint32_t color
 );

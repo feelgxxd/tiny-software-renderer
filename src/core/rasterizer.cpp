@@ -11,15 +11,6 @@ float edgeFunction(const Vec3& a, const Vec3& b, const Vec3& c)
          - (b.y - a.y) * (c.x - a.x);
 }
 
-struct ProjectedVertex {
-    Vec3 screen; 
-    float invW;
-    float ndcZ;
-
-    Vec3 worldPos;
-    Vec3 normal;
-};
-
 bool isBackface(const Vec3& v0, const Vec3& v1, const Vec3& v2)
 {
     Vec3 e1 = v1 - v0;
@@ -55,7 +46,7 @@ static uint32_t applyLight(
     return (r << 16) | (g << 8) | b;
 }
 
-static ProjectedVertex projectVertex(
+ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& model,
     const Mat4& viewProj,
