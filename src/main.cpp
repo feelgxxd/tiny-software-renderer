@@ -7,6 +7,32 @@ void runWindow(Framebuffer& fb);
 
 static float t = 0.0f;
 
+static Vec3 cubeVerts[8] = {
+    Vec3(-0.5f, -0.5f, -0.5f), // 0
+    Vec3( 0.5f, -0.5f, -0.5f), // 1
+    Vec3( 0.5f,  0.5f, -0.5f), // 2
+    Vec3(-0.5f,  0.5f, -0.5f), // 3
+    Vec3(-0.5f, -0.5f,  0.5f), // 4
+    Vec3( 0.5f, -0.5f,  0.5f), // 5
+    Vec3( 0.5f,  0.5f,  0.5f), // 6
+    Vec3(-0.5f,  0.5f,  0.5f)  // 7
+};
+
+static int cubeTris[12][3] = {
+    // Front (+Z)
+    {4, 5, 6}, {4, 6, 7},
+    // Back (-Z)
+    {1, 0, 3}, {1, 3, 2},
+    // Left (-X)
+    {0, 4, 7}, {0, 7, 3},
+    // Right (+X)
+    {5, 1, 2}, {5, 2, 6},
+    // Top (+Y)
+    {3, 7, 6}, {3, 6, 2},
+    // Bottom (-Y)
+    {0, 1, 5}, {0, 5, 4}
+};
+
 void render(Framebuffer& fb)
 {
     fb.clear(0x000000);
@@ -47,13 +73,48 @@ void render(Framebuffer& fb)
         Vec3( 0.0f,  0.5f, 0.0f), model1, viewProj, fb.width(), fb.height()
     );
 
-    drawTriangleFilledProjected(
+    /*drawTriangleFilledProjected(
         fb,
         pv0,
         pv1,
         pv2,
         0x00FF00
-    );
+    );*/
+
+    for (int i = 0; i < 12; i++)
+    {
+        ProjectedVertex pv0 = projectVertex(
+            cubeVerts[cubeTris[i][0]],
+            model1,
+            viewProj,
+            fb.width(),
+            fb.height()
+        );
+
+        ProjectedVertex pv1 = projectVertex(
+            cubeVerts[cubeTris[i][1]],
+            model1,
+            viewProj,
+            fb.width(),
+            fb.height()
+        );
+
+        ProjectedVertex pv2 = projectVertex(
+            cubeVerts[cubeTris[i][2]],
+            model1,
+            viewProj,
+            fb.width(),
+            fb.height()
+        );
+
+        drawTriangleFilledProjected(
+            fb,
+            pv0,
+            pv1,
+            pv2,
+            0x00FF00
+        );
+    }
 }
 
 int main()
