@@ -201,6 +201,12 @@ void drawTriangleFilledProjected(
     const Vec3& p1 = v1.screen;
     const Vec3& p2 = v2.screen;
 
+    Vec3 faceNormal = normalize(cross(e1, e2));
+    Vec3 viewDir = normalize(-v0.worldPos);
+
+    if (dot(faceNormal, viewDir) <= 0.0f)
+        return;
+
     float area = edgeFunction(p0, p1, p2);
     if (area == 0.0f) return;
 
