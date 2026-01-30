@@ -46,6 +46,17 @@ struct Mat4 {
         return result;
     }
 
+    static Mat4 transpose(const Mat4& a)
+    {
+        Mat4 r = {};
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                r.m[i][j] = a.m[j][i];
+            }
+        }
+        return r;
+    }
+
     static Mat4 perspective(float fov, float aspect, float znear, float zfar)
     {
         Mat4 r = {};
@@ -114,6 +125,31 @@ struct Mat4 {
 
         r.m[2][0] = -s;
         r.m[2][2] =  c;
+
+        return r;
+    }
+
+    static Mat4 inverseAffine(const Mat4& m)
+    {
+        Mat4 r = identity();
+
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                r.m[i][j] = m.m[j][i];
+            }
+        }
+
+        r.m[3][0] = -(m.m[3][0] * r.m[0][0] +
+                    m.m[3][1] * r.m[1][0] +
+                    m.m[3][2] * r.m[2][0]);
+
+        r.m[3][1] = -(m.m[3][0] * r.m[0][1] +
+                    m.m[3][1] * r.m[1][1] +
+                    m.m[3][2] * r.m[2][1]);
+
+        r.m[3][2] = -(m.m[3][0] * r.m[0][2] +
+                    m.m[3][1] * r.m[1][2] +
+                    m.m[3][2] * r.m[2][2]);
 
         return r;
     }

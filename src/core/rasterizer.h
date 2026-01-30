@@ -20,6 +20,8 @@ ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& model,
     const Mat4& viewProj,
+    const Vec3& normal,
+    const Mat4& normalMatrix,
     int width,
     int height
 );
