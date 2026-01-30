@@ -50,8 +50,6 @@ ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& model,
     const Mat4& viewProj,
-    const Vec3& normal,
-    const Mat4& normalMatrix,
     int width,
     int height
 ) {
@@ -86,14 +84,7 @@ ProjectedVertex projectVertex(
 
     out.worldPos = Vec3(world.x, world.y, world.z);
 
-    Vec3 modelNormal = Vec3(0, 0, 1);
-
-    Vec4 n4 = Mat4::multiply(
-        normalMatrix,
-        Vec4(modelNormal.x, modelNormal.y, modelNormal.z, 0.0f)
-    );
-
-    out.normal = normalize(Vec3(n4.x, n4.y, n4.z));
+    out.normal = Vec3(0, 0, 0);
 
     return out;
 }
@@ -398,9 +389,7 @@ void drawMesh(
 
         ProjectedVertex pv0 = projectVertex(
             v0.position,
-            v0.normal,
             model,
-            normalMatrix,
             viewProj,
             fb.width(),
             fb.height()
@@ -408,9 +397,7 @@ void drawMesh(
 
         ProjectedVertex pv1 = projectVertex(
             v1.position,
-            v1.normal,
             model,
-            normalMatrix,
             viewProj,
             fb.width(),
             fb.height()
@@ -418,9 +405,7 @@ void drawMesh(
 
         ProjectedVertex pv2 = projectVertex(
             v2.position,
-            v2.normal,
             model,
-            normalMatrix,
             viewProj,
             fb.width(),
             fb.height()

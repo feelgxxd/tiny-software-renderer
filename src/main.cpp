@@ -61,40 +61,7 @@ void render(Framebuffer& fb)
         100.0f
     );
 
-    Mat4 normalMatrix =
-        Mat4::transpose(
-            Mat4::inverseAffine(model1)
-        );
-
     Mat4 viewProj = Mat4::multiply(proj, view);
-
-    ProjectedVertex pv0 = projectVertex(
-        Vec3(-0.5f, -0.5f, 0.0f),
-        Vec3(0, 0, 1),
-        model1,
-        normalMatrix,
-        viewProj,
-        fb.width(),
-        fb.height()
-    );
-    ProjectedVertex pv1 = projectVertex(
-        Vec3( 0.5f, -0.5f, 0.0f),
-        Vec3(0, 0, 1),
-        model1,
-        normalMatrix,
-        viewProj,
-        fb.width(),
-        fb.height()
-    );
-    ProjectedVertex pv2 = projectVertex(
-        Vec3( 0.0f,  0.5f, 0.0f),
-        Vec3(0, 0, 1),
-        model1,
-        normalMatrix,
-        viewProj,
-        fb.width(),
-        fb.height()
-    );
 
     for (int i = 0; i < 12; i++)
     {
