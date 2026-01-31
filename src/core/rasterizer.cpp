@@ -261,21 +261,10 @@ void drawTriangleFilledProjected(
                 if(!fb.testAndSetDepth(x, y, depth))
                     continue;
 
-                // perspective-correct normal
-                Vec3 normal_over_w =
-                    v0.normal * (w0 * v0.invW) +
-                    v1.normal * (w1 * v1.invW) +
-                    v2.normal * (w2 * v2.invW);
+                Vec3 interpNormal = faceNormal;
 
-                if (normal_over_w.lengthSquared() < 1e-6f)
-                    continue;
-
-                Vec3 interpNormal = normalize(normal_over_w / invW);
-
-                // simple lambert
                 float ndotl = std::max(0.0f, dot(interpNormal, lightDir));
                 uint32_t litColor = multiplyColor(baseColor, ndotl);
-
                 fb.setPixel(x, y, litColor);
             }
         }
