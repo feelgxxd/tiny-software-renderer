@@ -46,6 +46,21 @@ static uint32_t applyLight(
     return (r << 16) | (g << 8) | b;
 }
 
+inline uint32_t multiplyColor(uint32_t color, float intensity)
+{
+    intensity = std::clamp(intensity, 0.0f, 1.0f);
+
+    uint8_t r = (color >> 16) & 0xFF;
+    uint8_t g = (color >> 8)  & 0xFF;
+    uint8_t b =  color        & 0xFF;
+
+    r = (uint8_t)(r * intensity);
+    g = (uint8_t)(g * intensity);
+    b = (uint8_t)(b * intensity);
+
+    return (r << 16) | (g << 8) | b;
+}
+
 ProjectedVertex projectVertex(
     const Vec3& v,
     const Mat4& model,
@@ -176,36 +191,15 @@ void drawTriangleFilledProjected(
     uint32_t baseColor
 )
 {
-    // World space normal
     Vec3 e1 = v1.worldPos - v0.worldPos;
     Vec3 e2 = v2.worldPos - v0.worldPos;
-    //Vec3 normal = normalize(cross(e1, e2));
+    Vec3 faceNormal = normalize(cross(e1, e2));
 
-    // Light (world space)
-    //static float t = 0.0f;
-    //t += 0.02f;
-
-    Vec3 lightDir = normalize(Vec3(0, 0, -1));
-    Vec3 lightDirWorld = normalize(Vec3(0.0f, 0.0f, -1.0f));
-
-    static float lt = 0.0f;
-    lt += 0.02f;
-
-    /*Vec3 lightDir = normalize(Vec3(
-        sinf(lt),
-        0.5f,
-        cosf(lt)
-    ));*/
+    Vec3 lightDir = normalize(Vec3(0, 0, 1));
 
     const Vec3& p0 = v0.screen;
     const Vec3& p1 = v1.screen;
     const Vec3& p2 = v2.screen;
-
-    Vec3 faceNormal = normalize(cross(e1, e2));
-    Vec3 viewDir = normalize(-v0.worldPos);
-
-    if (dot(faceNormal, viewDir) <= 0.0f)
-        return;
 
     float area = edgeFunction(p0, p1, p2);
     if (area == 0.0f) return;
@@ -225,9 +219,6 @@ void drawTriangleFilledProjected(
     minY = std::max(minY, 0);
     maxX = std::min(maxX, fb.width()  - 1);
     maxY = std::min(maxY, fb.height() - 1);
-
-    if (minX > maxX || minY > maxY)
-        return;
 
     for (int y = minY; y <= maxY; y++) {
         for (int x = minX; x <= maxX; x++) {
@@ -255,6 +246,9 @@ void drawTriangleFilledProjected(
                     w1 * v1.invW +
                     w2 * v2.invW;
 
+                if (invW <= 0.00001f)
+                    continue;
+
                 float depth =
                 (
                     w0 * v0.ndcZ * v0.invW +
@@ -262,27 +256,27 @@ void drawTriangleFilledProjected(
                     w2 * v2.ndcZ * v2.invW
                 ) / invW;
 
-                if (fb.testAndSetDepth(x, y, depth))
-                {
-                   Vec3 faceNormal = normalize(cross(e1, e2));
-                   Vec3 interpNormal = faceNormal;
+                depth = depth * 0.5f + 0.5f;
 
-                    /*Vec3 viewDir = normalize(-(
-                        v0.worldPos * w0 +
-                        v1.worldPos * w1 +
-                        v2.worldPos * w2
-                    ));*/
+                if(!fb.testAndSetDepth(x, y, depth))
+                    continue;
 
-                    Vec3 viewDir = Vec3(0, 0, 1);
+                // perspective-correct normal
+                Vec3 normal_over_w =
+                    v0.normal * (w0 * v0.invW) +
+                    v1.normal * (w1 * v1.invW) +
+                    v2.normal * (w2 * v2.invW);
 
-                    uint32_t litColor =
-                      applyLight(interpNormal, lightDir, viewDir, baseColor);
+                if (normal_over_w.lengthSquared() < 1e-6f)
+                    continue;
 
-                    //if (fb.testAndSetDepth(x, y, depth))
-                    {
-                        fb.setPixel(x, y, litColor);
-                    }
-                }
+                Vec3 interpNormal = normalize(normal_over_w / invW);
+
+                // simple lambert
+                float ndotl = std::max(0.0f, dot(interpNormal, lightDir));
+                uint32_t litColor = multiplyColor(baseColor, ndotl);
+
+                fb.setPixel(x, y, litColor);
             }
         }
     }

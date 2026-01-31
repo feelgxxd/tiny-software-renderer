@@ -15,6 +15,10 @@ struct Vec3 {
         return Vec3(-x, -y, -z);
     }
 
+    Vec3 operator/(float s) const {
+        return Vec3(x / s, y / s, z / s);
+    }
+
     Vec3 operator * (float s) const {
         return Vec3(x * s, y * s, z * s);
     }
@@ -27,6 +31,10 @@ struct Vec3 {
         float len = std::sqrt(x * x + y * y + z * z);
         if (len == 0) return Vec3(0, 0, 0);
         return Vec3(x / len, y / len, z / len);
+    }
+
+    float lengthSquared() const {
+        return x*x + y*y + z*z;
     }
 };
 
