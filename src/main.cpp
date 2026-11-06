@@ -7,15 +7,21 @@ void runWindow(Framebuffer& fb);
 
 static float t = 0.0f;
 
-static Vec3 cubeVerts[8] = {
-    Vec3(-0.5f, -0.5f, -0.5f), // 0
-    Vec3( 0.5f, -0.5f, -0.5f), // 1
-    Vec3( 0.5f,  0.5f, -0.5f), // 2
-    Vec3(-0.5f,  0.5f, -0.5f), // 3
-    Vec3(-0.5f, -0.5f,  0.5f), // 4
-    Vec3( 0.5f, -0.5f,  0.5f), // 5
-    Vec3( 0.5f,  0.5f,  0.5f), // 6
-    Vec3(-0.5f,  0.5f,  0.5f)  // 7
+struct Vertex
+{
+    Vec3 position;
+    Vec3 normal;
+};
+
+static Vertex cubeVerts[8] = {
+    { Vec3(-0.5f,-0.5f,-0.5f), Vec3(-1,-1,-1).normalized() },
+    { Vec3( 0.5f,-0.5f,-0.5f), Vec3( 1,-1,-1).normalized() },
+    { Vec3( 0.5f, 0.5f,-0.5f), Vec3( 1, 1,-1).normalized() },
+    { Vec3(-0.5f, 0.5f,-0.5f), Vec3(-1, 1,-1).normalized() },
+    { Vec3(-0.5f,-0.5f, 0.5f), Vec3(-1,-1, 1).normalized() },
+    { Vec3( 0.5f,-0.5f, 0.5f), Vec3( 1,-1, 1).normalized() },
+    { Vec3( 0.5f, 0.5f, 0.5f), Vec3( 1, 1, 1).normalized() },
+    { Vec3(-0.5f, 0.5f, 0.5f), Vec3(-1, 1, 1).normalized() }
 };
 
 static int cubeTris[12][3] = {
@@ -48,6 +54,11 @@ void render(Framebuffer& fb)
     Mat4 translation2 = Mat4::translation(0.8f, 0.0f, -3.0f);
     Mat4 model2 = Mat4::multiply(rotation, translation2);
 
+    Mat4 normalMatrix =
+        Mat4::transpose(
+            Mat4::inverseAffine(model1)
+        );
+
     Vec3 camPos    = Vec3(0.0f, 0.0f, 3.0f);
     Vec3 camTarget = Vec3(0.0f, 0.0f, 0.0f);
     Vec3 camUp     = Vec3(0.0f, 1.0f, 0.0f);
@@ -69,6 +80,7 @@ void render(Framebuffer& fb)
             cubeVerts[cubeTris[i][0]],
             model1,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );
@@ -77,6 +89,7 @@ void render(Framebuffer& fb)
             cubeVerts[cubeTris[i][1]],
             model1,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );
@@ -85,6 +98,7 @@ void render(Framebuffer& fb)
             cubeVerts[cubeTris[i][2]],
             model1,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );

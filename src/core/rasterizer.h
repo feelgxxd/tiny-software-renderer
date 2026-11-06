@@ -17,9 +17,10 @@ struct ProjectedVertex {
 };
 
 ProjectedVertex projectVertex(
-    const Vec3& v,
+    const Vertex& v,
     const Mat4& model,
     const Mat4& viewProj,
+    const Mat4& normalMatrix,
     int width,
     int height
 );

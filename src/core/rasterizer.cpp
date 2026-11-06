@@ -62,15 +62,16 @@ inline uint32_t multiplyColor(uint32_t color, float intensity)
 }
 
 ProjectedVertex projectVertex(
-    const Vec3& v,
+    const Vertex& v,  
     const Mat4& model,
     const Mat4& viewProj,
+    const Mat4& normalMatrix,
     int width,
     int height
 ) {
     Vec4 world = Mat4::multiply(
         model,
-        Vec4(v.x, v.y, v.z, 1.0f)
+        Vec4(v.position.x, v.position.y, v.position.z, 1.0f)
     );
 
     Vec4 clip = Mat4::multiply(viewProj, world);
@@ -89,17 +90,23 @@ ProjectedVertex projectVertex(
     static int debugCount2 = 0;
     if (debugCount2++ < 2) {
         printf("Vertex (%.2f, %.2f, %.2f) -> clipZ: %.3f, invW: %.3f, ndcZ: %.3f\n", 
-            v.x, v.y, v.z, clip.z, out.invW, ndcZ);
+            v.position.x, v.position.y, v.position.z, clip.z, out.invW, ndcZ);
     }
 
     out.screen.x = (ndcX + 1.0f) * 0.5f * width;
     out.screen.y = (1.0f - (ndcY + 1.0f) * 0.5f) * height;
-    out.ndcZ = (ndcZ + 1.0f) * 0.5f;
     out.screen.z = 0.0f;
+
+    out.ndcZ = ndcZ;
 
     out.worldPos = Vec3(world.x, world.y, world.z);
 
-    out.normal = Vec3(0, 0, 0);
+    Vec4 n4 = Mat4::multiply(
+        normalMatrix,
+        Vec4(v.normal.x, v.normal.y, v.normal.z, 0.0f)
+    );
+
+    out.normal = normalize(Vec3(n4.x, n4.y, n4.z));
 
     return out;
 }
@@ -258,10 +265,15 @@ void drawTriangleFilledProjected(
 
                 depth = depth * 0.5f + 0.5f;
 
+                Vec3 normal_over_w =
+                    v0.normal * (w0 * v0.invW) +
+                    v1.normal * (w1 * v1.invW) +
+                    v2.normal * (w2 * v2.invW);
+
+                Vec3 interpNormal = normalize(normal_over_w / invW);
+
                 if(!fb.testAndSetDepth(x, y, depth))
                     continue;
-
-                Vec3 interpNormal = faceNormal;
 
                 float ndotl = std::max(0.0f, dot(interpNormal, lightDir));
                 uint32_t litColor = multiplyColor(baseColor, ndotl);
@@ -371,25 +383,28 @@ void drawMesh(
         mesh.getTriangle(i, v0, v1, v2);
 
         ProjectedVertex pv0 = projectVertex(
-            v0.position,
+            v0,
             model,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );
 
         ProjectedVertex pv1 = projectVertex(
-            v1.position,
+            v1,
             model,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );
 
         ProjectedVertex pv2 = projectVertex(
-            v2.position,
+            v2,
             model,
             viewProj,
+            normalMatrix,
             fb.width(),
             fb.height()
         );
