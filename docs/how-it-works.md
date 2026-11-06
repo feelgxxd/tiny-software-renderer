@@ -406,11 +406,16 @@ pool before destroying the old one, which briefly needed twice the workers. The 
 spawns its workers once and only changes how many participate in each job. That is also
 cheaper on the desktop.
 
-**Lesson: headless browsers lie about animation.** While testing the demo through the
-DevTools protocol, the new headless mode sometimes stopped delivering
-`requestAnimationFrame` after a burst of load, even though the page stayed responsive.
-The same sequence ran flawlessly in a visible window and in the old headless mode.
-Timing measurements in a real window are the ones that count.
+**Lesson: check `document.visibilityState` before debugging a "freeze".** While
+stress-testing the demo through the DevTools protocol, frames would occasionally stop
+even though the page stayed responsive. Pausing the main thread showed it idle in
+ordinary page JavaScript, not stuck in WebAssembly.
+
+The actual cause was that the automated browser had marked the page `hidden`, and
+browsers pause `requestAnimationFrame` for hidden documents. Making the page visible
+again resumed rendering immediately, and the rest of the stress sequence (scene, thread
+and SIMD switches) ran cleanly. A real user sees the same behavior when switching tabs:
+the demo stops using CPU and continues on return.
 
 ---
 
