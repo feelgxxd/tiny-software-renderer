@@ -1,3 +1,0 @@
-D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/SoftwareRenderer.dir
-D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/ALL_BUILD.dir
-D:/feelgxxd/tiny_software_renderer/build/CMakeFiles/ZERO_CHECK.dir
