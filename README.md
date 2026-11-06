@@ -9,6 +9,9 @@ No OpenGL, Vulkan, or Direct3D: every pixel is produced on the CPU by code in th
 repository, from vertex transformation and clipping to PBR shading and shadow mapping.
 SDL2 is only used to put the finished image in a window.
 
+**▶ [Live demo in your browser](https://feelgxxd.github.io/tiny-software-renderer/)**: the same C++ code
+compiled to WebAssembly with pthreads. No WebGL is used for rendering.
+
 <p align="center">
   <img src="docs/media/shadows.gif" width="640" alt="Animated scene with shadow mapping, normal mapping and PBR materials">
 </p>
@@ -133,6 +136,20 @@ ctest --test-dir build -C Release --output-on-failure
 Binaries are placed in `build/bin/` (`build/bin/Release/` with Visual Studio).
 Pass `-DSR_BUILD_VIEWER=OFF` for a headless build with no SDL dependency.
 
+**WebAssembly demo.** `web/build.sh` builds two variants: one with pthreads, which needs
+a cross-origin-isolated page, and a single-threaded fallback. It then copies them next
+to `web/index.html`. The easiest way to run it is the official Emscripten image:
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src emscripten/emsdk:3.1.74 web/build.sh
+# then serve build-web/dist with any static file server
+```
+
+GitHub Pages cannot send the COOP/COEP headers that `SharedArrayBuffer` requires, so
+the page registers [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker),
+which adds them. In browsers where that fails, the page falls back to the
+single-threaded build.
+
 ## Usage
 
 ```bash
@@ -186,6 +203,7 @@ sr_render --scene all --bench                   # thread-scaling table
 
 - [stb_image / stb_image_write](https://github.com/nothings/stb) by Sean Barrett (public domain)
 - [SDL2](https://www.libsdl.org/) (zlib license), used only to present frames
+- [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) by Guido Zuidhof (MIT), for cross-origin isolation on static hosts
 - [Spot](https://www.cs.cmu.edu/~kmcrane/Projects/ModelRepository/) by Keenan Crane (public domain)
 - The environment BRDF approximation follows Brian Karis, *Physically Based Shading on Mobile* (2014)
 

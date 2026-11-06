@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tiny-software-renderer · live demo</title>
+<meta name="description" content="A multithreaded, tile-based software rasterizer written in C++ and compiled to WebAssembly. No WebGL: every pixel is computed on the CPU.">
+<script src="coi-serviceworker.js"></script>
+<style>
+  :root {
+    --bg: #0d1014;
+    --panel: #151a21;
+    --panel-2: #1c232c;
+    --line: #2a333e;
+    --text: #e6eaef;
+    --muted: #8b96a3;
+    --accent: #5eb0ff;
+    --accent-2: #ffb35e;
+    --ok: #6fd18f;
+    --warn: #ffcf5e;
+    --radius: 10px;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { max-width: 1320px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; margin-bottom: 18px; }
+  h1 { font-size: 22px; margin: 0; letter-spacing: .2px; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .tagline { color: var(--muted); margin: 4px 0 0; max-width: 720px; }
+  .links { display: flex; gap: 16px; font-size: 14px; }
+
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; align-items: start; }
+  @media (max-width: 980px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .layout > * { min-width: 0; }
+
+  .stage { position: relative; background: #000; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; aspect-ratio: 16 / 9; }
+  canvas { display: block; width: 100%; height: 100%; outline: none; cursor: grab; touch-action: none; image-rendering: auto; }
+  canvas:active { cursor: grabbing; }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+    background: radial-gradient(ellipse at center, #1a2230 0%, #0b0e12 70%); color: var(--muted); font-size: 14px; transition: opacity .3s; }
+  .overlay.hidden { opacity: 0; pointer-events: none; }
+  .bar { width: 220px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .hud { position: absolute; left: 10px; top: 10px; font: 12px/1.4 var(--mono); background: rgba(8, 10, 14, .72); border: 1px solid rgba(255,255,255,.08);
+    padding: 6px 9px; border-radius: 7px; pointer-events: none; white-space: pre; }
+  .hint { position: absolute; right: 10px; bottom: 10px; font-size: 12px; color: #c9d2dc; background: rgba(8,10,14,.6); padding: 4px 8px; border-radius: 6px; pointer-events: none; }
+
+  aside { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .card h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  .seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .seg.three { grid-template-columns: repeat(3, 1fr); }
+  button { font: inherit; font-size: 13px; color: var(--text); background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px;
+    padding: 7px 8px; cursor: pointer; transition: background .15s, border-color .15s; }
+  button:hover { border-color: #3c4856; }
+  button.on { background: color-mix(in srgb, var(--accent) 22%, var(--panel-2)); border-color: var(--accent); }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 0; font-size: 14px; }
+  .switch { position: relative; width: 38px; height: 22px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: var(--line); border-radius: 11px; transition: background .15s; cursor: pointer; }
+  .switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .15s; }
+  .switch input:checked + span { background: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(16px); }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .threads-head { display: flex; justify-content: space-between; font-size: 14px; }
+  .threads-head b { font-family: var(--mono); }
+  .note { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .note.warn { color: var(--warn); }
+
+  .stats { display: grid; grid-template-columns: 1fr auto; gap: 3px 12px; font-size: 13px; }
+  .stats dt { color: var(--muted); }
+  .stats dd { margin: 0; font-family: var(--mono); text-align: right; }
+
+  .explain { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+  .explain .card p { margin: 0; color: #c3ccd6; font-size: 14px; }
+  .explain .card h3 { margin: 0 0 6px; font-size: 15px; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 13px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>tiny-software-renderer <span>· live demo</span></h1>
+      <p class="tagline">A multithreaded, tile-based rasterizer written from scratch in C++ and compiled to WebAssembly.
+        <strong>No WebGL is used for rendering:</strong> every pixel below is computed on your CPU.</p>
+    </div>
+    <nav class="links">
+      <a href="https://github.com/feelgxxd/tiny-software-renderer">Source on GitHub</a>
+      <a href="https://github.com/feelgxxd/tiny-software-renderer/blob/main/docs/how-it-works.md">How it works</a>
+    </nav>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <canvas id="canvas" width="960" height="540" tabindex="0" oncontextmenu="event.preventDefault()"></canvas>
+      <div class="hud" id="hud"></div>
+      <div class="hint">drag to orbit · scroll to zoom</div>
+      <div class="overlay" id="overlay">
+        <div id="status">Loading renderer…</div>
+        <div class="bar"><div id="progress"></div></div>
+      </div>
+    </div>
+
+    <aside>
+      <section class="card">
+        <h2>Scene</h2>
+        <div class="seg" id="scenes">
+          <button data-v="0">Materials</button>
+          <button data-v="1">Shadows</button>
+          <button data-v="2">Textures</button>
+          <button data-v="3">Spot</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>View</h2>
+        <div class="seg three" id="views">
+          <button data-v="0">Shaded</button>
+          <button data-v="1">Albedo</button>
+          <button data-v="2">Normals</button>
+          <button data-v="3">Lighting</button>
+          <button data-v="4">Mip level</button>
+          <button data-v="5">Depth</button>
+        </div>
+        <div class="row" style="margin-top:8px">Wireframe overlay <label class="switch"><input type="checkbox" id="wire"><span></span></label></div>
+        <div class="row">Shadows <label class="switch"><input type="checkbox" id="shadows" checked><span></span></label></div>
+        <div class="row">Tile cost heatmap <label class="switch"><input type="checkbox" id="heat"><span></span></label></div>
+        <div class="row">Pause animation <label class="switch"><input type="checkbox" id="pause"><span></span></label></div>
+      </section>
+
+      <section class="card">
+        <h2>Performance</h2>
+        <div class="threads-head"><span>Worker threads</span><b id="threadsLabel">–</b></div>
+        <input type="range" id="threads" min="1" max="1" value="1">
+        <div class="note" id="threadNote"></div>
+        <div class="row" style="margin-top:6px">Resolution
+          <div class="seg" id="scale" style="width:150px"><button data-v="1">100%</button><button data-v="0.5">50%</button></div>
+        </div>
+        <button id="reset" style="width:100%;margin-top:8px">Reset camera</button>
+      </section>
+
+      <section class="card">
+        <h2>Frame statistics</h2>
+        <dl class="stats" id="stats"></dl>
+      </section>
+    </aside>
+  </div>
+
+  <section class="explain">
+    <div class="card"><h3>Tile-based and parallel</h3><p>Triangles are binned into 64×64 pixel tiles. Each tile is rasterized by a single worker thread, so the color and depth buffers need no locks and the image is identical for any thread count. Try the thread slider and the heatmap.</p></div>
+    <div class="card"><h3>Correct rasterization</h3><p>Sub-pixel fixed-point edge functions with the top-left fill rule, homogeneous near-plane clipping, perspective-correct interpolation, and screen-space UV derivatives for mip selection.</p></div>
+    <div class="card"><h3>Physically based shading</h3><p>Cook-Torrance GGX with metallic/roughness materials, normal mapping, soft PCF shadow maps, sky lighting, and ACES tone mapping, all in C++ fragment "shaders".</p></div>
+  </section>
+
+  <footer>Built with C++17, Emscripten and SDL2 (used only to present the finished frame). Spot model by Keenan Crane.</footer>
+</div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  // ?single forces the fallback build (useful for comparing / testing).
+  const forceSingle = new URLSearchParams(location.search).has("single");
+  const threaded = !forceSingle && self.crossOriginIsolated === true && typeof SharedArrayBuffer !== "undefined";
+  const variant = threaded ? "sr_web_mt" : "sr_web_st";
+  const canvas = $("canvas");
+  let ready = false;
+
+  const call = (name, ...args) => {
+    if (!ready) return;
+    Module.ccall(name, null, args.map(() => "number"), args);
+  };
+
+  // Segmented button groups
+  function group(id, onPick) {
+    const el = $(id);
+    const buttons = [...el.querySelectorAll("button")];
+    const select = (v) => buttons.forEach((b) => b.classList.toggle("on", b.dataset.v === String(v)));
+    el.addEventListener("click", (e) => {
+      const b = e.target.closest("button");
+      if (!b || b.disabled) return;
+      select(b.dataset.v);
+      onPick(Number(b.dataset.v));
+      canvas.focus({ preventScroll: true });
+    });
+    return select;
+  }
+  const selectScene = group("scenes", (v) => call("sr_set_scene", v));
+  const selectView = group("views", (v) => call("sr_set_view", v));
+  const selectScale = group("scale", (v) => call("sr_set_scale", v));
+  selectScene(0); selectView(0); selectScale(1);
+
+  const bindSwitch = (id, fn) => $(id).addEventListener("change", (e) => call(fn, e.target.checked ? 1 : 0));
+  bindSwitch("wire", "sr_set_wireframe");
+  bindSwitch("shadows", "sr_set_shadows");
+  bindSwitch("heat", "sr_set_heatmap");
+  bindSwitch("pause", "sr_set_paused");
+  $("reset").addEventListener("click", () => call("sr_reset_camera"));
+  $("threads").addEventListener("input", (e) => {
+    $("threadsLabel").textContent = e.target.value;
+    call("sr_set_threads", Number(e.target.value));
+  });
+  canvas.addEventListener("pointerdown", () => canvas.focus({ preventScroll: true }));
+  canvas.addEventListener("wheel", (e) => e.preventDefault(), { passive: false });
+
+  const fmt = (n) => n >= 1e6 ? (n / 1e6).toFixed(2) + " M" : n >= 1e3 ? (n / 1e3).toFixed(1) + " k" : String(n);
+  const sceneNames = ["materials", "shadows", "textures", "spot"];
+
+  function updateStats() {
+    if (!ready) return;
+    const s = JSON.parse(Module.ccall("sr_stats", "string", [], []));
+    const fps = s.frameMs > 0 ? 1000 / s.frameMs : 0;
+    $("hud").textContent = `${s.frameMs.toFixed(1)} ms  ·  ${fps.toFixed(0)} fps  ·  ${s.threads} thread${s.threads > 1 ? "s" : ""}`;
+    const rows = [
+      ["Render time", s.frameMs.toFixed(2) + " ms"],
+      ["Shadow pass", s.shadowMs.toFixed(2) + " ms"],
+      ["Resolution", `${s.width}×${s.height}`],
+      ["Triangles submitted", fmt(s.triangles)],
+      ["Triangles rasterized", fmt(s.rasterized)],
+      ["Back-face culled", fmt(s.culled)],
+      ["Fragments shaded", fmt(s.fragments)],
+      ["Build", threaded ? "wasm + pthreads" : "wasm (single thread)"],
+    ];
+    $("stats").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  }
+
+  window.Module = {
+    canvas,
+    print: (t) => console.log(t),
+    printErr: (t) => console.warn(t),
+    setStatus(text) {
+      const m = text.match(/\((\d+(\.\d+)?)\/(\d+)\)/);
+      if (m) $("progress").style.width = (100 * m[1] / m[3]) + "%";
+      if (text) $("status").textContent = text.replace(/\(.*\)/, "").trim() || "Loading renderer…";
+    },
+    onRendererReady() {
+      ready = true;
+      const s = JSON.parse(Module.ccall("sr_stats", "string", [], []));
+      const slider = $("threads");
+      slider.max = s.maxThreads;
+      slider.value = s.threads;
+      slider.disabled = s.maxThreads <= 1;
+      $("threadsLabel").textContent = s.threads;
+      $("threadNote").textContent = threaded
+        ? `Your browser exposes ${s.maxThreads} hardware threads. Drag to 1 to compare.`
+        : forceSingle
+          ? "Single-threaded build (forced by ?single). Remove it from the URL to use all cores."
+          : "This browser did not enable cross-origin isolation, so the single-threaded build is running.";
+      $("threadNote").classList.toggle("warn", !threaded);
+      $("overlay").classList.add("hidden");
+      updateStats();
+      setInterval(updateStats, 250);
+    },
+  };
+
+  window.addEventListener("error", (e) => {
+    $("status").textContent = "Failed to start: " + (e.message || "unknown error");
+  });
+
+  const script = document.createElement("script");
+  script.src = variant + ".js";
+  document.body.appendChild(script);
+})();
+</script>
+</body>
+</html>
