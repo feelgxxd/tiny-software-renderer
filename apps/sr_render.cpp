@@ -34,6 +34,7 @@ struct Options {
     int frames = 1;
     float fps = 30.0f;
     float time = 0.0f;
+    float turntable = -1.0f; // < 0: use the scene default
     bool bench = false;
     int benchFrames = 20;
     RenderSettings settings;
@@ -52,6 +53,7 @@ void usage()
         "  --shadow-size N    shadow map resolution (default 2048)\n"
         "  --threads N        worker threads (default: all hardware threads)\n"
         "  --time T           animation time in seconds (default 0)\n"
+        "  --turntable S      camera orbit speed in rad/s (default: per scene)\n"
         "  --frames N         render an N-frame sequence (PATH gets _0000 suffixes)\n"
         "  --fps F            sequence frame rate (default 30)\n"
         "  --bench            measure frame time for 1..N threads\n"
@@ -91,6 +93,7 @@ bool parseArgs(int argc, char** argv, Options& o)
         else if (a == "--frames") o.frames = std::max(1, std::atoi(next()));
         else if (a == "--fps") o.fps = static_cast<float>(std::atof(next()));
         else if (a == "--time") o.time = static_cast<float>(std::atof(next()));
+        else if (a == "--turntable") o.turntable = static_cast<float>(std::atof(next()));
         else if (a == "--bench") o.bench = true;
         else if (a == "--bench-frames") o.benchFrames = std::max(1, std::atoi(next()));
         else if (a == "--wireframe") o.settings.wireframe = true;
@@ -214,6 +217,7 @@ int main(int argc, char** argv)
             ++failures;
             continue;
         }
+        if (o.turntable >= 0.0f) scene.turntableSpeed = o.turntable;
 
         std::string out = (o.out.empty() || scenes.size() > 1) ? defaultOut(o, name) : o.out;
         for (int f = 0; f < o.frames; ++f) {

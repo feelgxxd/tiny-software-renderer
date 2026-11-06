@@ -3,6 +3,7 @@
 #include "core/framebuffer.h"
 
 #include <cmath>
+#include <cstdlib>
 #include <cstdint>
 #include <vector>
 

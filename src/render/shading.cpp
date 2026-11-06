@@ -237,7 +237,7 @@ bool PbrShader::fragment(const FragmentInput& in, Vec3& color) const
     case DebugView::Depth: {
         float zNdc = in.depth * 2.0f - 1.0f;
         float linear = (2.0f * f.zNear * f.zFar) / (f.zFar + f.zNear - zNdc * (f.zFar - f.zNear));
-        float g = 1.0f - clamp01(std::log2(linear + 1.0f) / std::log2(f.zFar + 1.0f) * 1.6f);
+        float g = std::exp(-linear / 3.5f); // near = white, fades to black with distance
         color = debugEncode(Vec3(g));
         return true;
     }

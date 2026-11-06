@@ -92,7 +92,7 @@ void buildShadows(Scene& s)
     brick.normalMap = brickNormal.get();
     brick.roughness = 0.75f;
     auto& cube = addObject(s, std::make_shared<Mesh>(Mesh::cube(1.3f)), Mat4::identity(), brick);
-    cube.animate = [](float t) { return Mat4::translation({-1.5f, 0.65f, -0.2f}) * Mat4::rotationY(t * 0.4f + 0.5f); };
+    cube.animate = [](float t) { return Mat4::translation({-1.5f, 0.65f, -0.2f}) * Mat4::rotationY(t * 0.5f + 0.5f); };
 
     Material copper;
     copper.albedo = {0.95f, 0.64f, 0.54f};
@@ -100,7 +100,7 @@ void buildShadows(Scene& s)
     copper.roughness = 0.3f;
     auto& torus = addObject(s, std::make_shared<Mesh>(Mesh::torus(0.62f, 0.22f, 96, 32)), Mat4::identity(), copper);
     torus.animate = [](float t) {
-        return Mat4::translation({1.4f, 1.0f, -0.3f}) * Mat4::rotationZ(0.5f) * Mat4::rotationX(t * 0.9f + 1.2f);
+        return Mat4::translation({1.4f, 1.0f, -0.3f}) * Mat4::rotationZ(0.5f) * Mat4::rotationX(t * 1.0f + 1.2f);
     };
 
     Material plastic;

@@ -5,6 +5,7 @@
 #include "render/scene.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <cstring>
 #include <memory>
 

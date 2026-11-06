@@ -37,7 +37,8 @@ struct Scene {
     Vec3 shadowCenter{0.0f};
     float shadowRadius = 5.0f;
     // Optional idle camera motion (used by the CLI to render turntables).
-    float turntableSpeed = 0.35f;
+    // Speeds in the shadows scene are multiples of this so animations loop every 8*pi seconds.
+    float turntableSpeed = 0.25f;
 };
 
 const std::vector<std::string>& sceneNames();
