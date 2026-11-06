@@ -4,6 +4,7 @@
 // time so filtering and mip generation happen in linear space.
 
 #include "math/math.h"
+#include "math/simd.h"
 
 #include <string>
 #include <vector>
@@ -34,6 +35,10 @@ public:
     Vec4 sample(Vec2 uv, Vec2 dUVdx, Vec2 dUVdy) const;
     float computeLod(Vec2 dUVdx, Vec2 dUVdy) const;
 
+    // Trilinear RGB lookup for 4 lanes sharing one LOD (a 2x2 quad).
+    // Coordinates and weights are computed with SIMD; only texel reads are per lane.
+    V3 sampleQuad(const F4& u, const F4& v, float lod, int laneMask) const;
+
 private:
     struct Level {
         int width = 0;
@@ -43,6 +48,7 @@ private:
     };
 
     void buildMips();
+    V3 bilinearQuad(const F4& u, const F4& v, int level, int laneMask) const;
 
     std::vector<Level> m_levels;
 };

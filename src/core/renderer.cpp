@@ -103,9 +103,15 @@ Renderer::~Renderer() = default;
 
 void Renderer::setThreadCount(int threadCount)
 {
-    m_pool = std::make_unique<ThreadPool>(threadCount);
+    const int wanted = threadCount <= 0 ? ThreadPool::hardwareThreads() : threadCount;
+    if (m_pool && wanted <= m_pool->capacity()) {
+        m_pool->setActiveThreads(wanted); // no thread creation or teardown
+        return;
+    }
+    m_pool.reset(); // join the old workers before spawning new ones
+    m_pool = std::make_unique<ThreadPool>(wanted);
     // One cache line per counter so workers don't false-share.
-    m_fragmentCounters.assign(static_cast<size_t>(m_pool->threadCount()) * 8, 0);
+    m_fragmentCounters.assign(static_cast<size_t>(m_pool->capacity()) * 8, 0);
 }
 
 int Renderer::threadCount() const
@@ -373,9 +379,7 @@ void Renderer::rasterizeTile(int tileIndex, int worker)
     const bool hasColor = m_target->hasColor();
     uint64_t fragments = 0;
 
-    float varyings[kMaxVaryings];
-    FragmentInput frag;
-    frag.varyings = varyings;
+    QuadInput quad;
 
     for (uint32_t triIndex : bin) {
         const Triangle& t = m_triangles[triIndex];
@@ -388,113 +392,138 @@ void Renderer::rasterizeTile(int tileIndex, int worker)
             &m_varyings[t.varyingOffset + 2 * varyingCount],
         };
         const bool shade = hasColor && shader.hasFragmentStage;
-        const int uvSlot = shader.uvSlot;
+        const bool depthTest = draw.state.depthTest;
+        const bool depthWrite = draw.state.depthWrite;
 
+        // Pixel rectangle this tile owns for this triangle.
         const int x0 = std::max(t.minX, tileX0), x1 = std::min(t.maxX, tileX1);
         const int y0 = std::max(t.minY, tileY0), y1 = std::min(t.maxY, tileY1);
         if (x0 > x1 || y0 > y1) continue;
+
+        // Walk 2x2 quads aligned to even pixel coordinates. Tiles are 64-pixel
+        // aligned, so a quad never straddles two tiles (i.e. two threads).
+        const int qx0 = x0 & ~1, qy0 = y0 & ~1;
 
         // Edge i is opposite vertex i, so its value is vertex i's barycentric weight.
         const int32_t* X = t.x;
         const int32_t* Y = t.y;
         const int ea[3] = {1, 2, 0}, eb[3] = {2, 0, 1};
-        int64_t stepX[3], stepY[3], rowStart[3];
-        int64_t bias[3];
-        float invEdgeLen[3];
-        const int64_t px = int64_t(x0) * kSubpixelScale + kSubpixelScale / 2;
-        const int64_t py = int64_t(y0) * kSubpixelScale + kSubpixelScale / 2;
+        int64_t stepX[3], stepY[3], rowStart[3], bias[3];
+        float invEdgeLen[3] = {};
+        const bool wire = m_wireframe && t.edgeMask && shade;
+        const int64_t px = int64_t(qx0) * kSubpixelScale + kSubpixelScale / 2;
+        const int64_t py = int64_t(qy0) * kSubpixelScale + kSubpixelScale / 2;
         for (int e = 0; e < 3; ++e) {
             int a = ea[e], b = eb[e];
             stepX[e] = -int64_t(Y[b] - Y[a]) * kSubpixelScale;
             stepY[e] = int64_t(X[b] - X[a]) * kSubpixelScale;
             rowStart[e] = edge(X[a], Y[a], X[b], Y[b], px, py);
             bias[e] = isTopLeft(X[a], Y[a], X[b], Y[b]) ? 0 : -1;
-            float dx = float(X[b] - X[a]), dy = float(Y[b] - Y[a]);
-            invEdgeLen[e] = 1.0f / (std::sqrt(dx * dx + dy * dy) * kSubpixelScale);
+            if (wire) {
+                float dx = float(X[b] - X[a]), dy = float(Y[b] - Y[a]);
+                invEdgeLen[e] = 1.0f / (std::sqrt(dx * dx + dy * dy) * kSubpixelScale);
+            }
         }
 
-        const float invArea = 1.0f / static_cast<float>(t.area);
-        frag.frontFacing = t.frontFacing;
+        const F4 invArea(1.0f / static_cast<float>(t.area));
+        const F4 iw0(t.invW[0]), iw1(t.invW[1]), iw2(t.invW[2]);
+        const F4 z0(t.z[0]), z1(t.z[1]), z2(t.z[2]);
+        quad.frontFacing = t.frontFacing;
 
-        // Perspective-correct barycentrics from (unnormalized) screen weights.
-        auto perspective = [&](float l0, float l1, float l2, float out[3]) {
-            float w0 = l0 * t.invW[0], w1 = l1 * t.invW[1], w2 = l2 * t.invW[2];
-            float inv = 1.0f / (w0 + w1 + w2);
-            out[0] = w0 * inv;
-            out[1] = w1 * inv;
-            out[2] = w2 * inv;
-        };
-        auto interpolateUv = [&](const float b[3]) {
-            return Vec2(b[0] * vary[0][uvSlot] + b[1] * vary[1][uvSlot] + b[2] * vary[2][uvSlot],
-                        b[0] * vary[0][uvSlot + 1] + b[1] * vary[1][uvSlot + 1] + b[2] * vary[2][uvSlot + 1]);
-        };
-
-        for (int y = y0; y <= y1; ++y) {
+        for (int qy = qy0; qy <= y1; qy += 2) {
             int64_t e0 = rowStart[0], e1 = rowStart[1], e2 = rowStart[2];
-            size_t index = static_cast<size_t>(y) * width + x0;
 
-            for (int x = x0; x <= x1; ++x, ++index, e0 += stepX[0], e1 += stepX[1], e2 += stepX[2]) {
-                if ((e0 + bias[0]) < 0 || (e1 + bias[1]) < 0 || (e2 + bias[2]) < 0) continue;
+            for (int qx = qx0; qx <= x1; qx += 2, e0 += 2 * stepX[0], e1 += 2 * stepX[1], e2 += 2 * stepX[2]) {
+                // Edge values for the 4 lanes (lane order is documented in shader.h).
+                const int64_t le[3][4] = {
+                    {e0, e0 + stepX[0], e0 + stepY[0], e0 + stepX[0] + stepY[0]},
+                    {e1, e1 + stepX[1], e1 + stepY[1], e1 + stepX[1] + stepY[1]},
+                    {e2, e2 + stepX[2], e2 + stepY[2], e2 + stepX[2] + stepY[2]},
+                };
 
-                float l0 = static_cast<float>(e0) * invArea;
-                float l1 = static_cast<float>(e1) * invArea;
-                float l2 = static_cast<float>(e2) * invArea;
-                float z = l0 * t.z[0] + l1 * t.z[1] + l2 * t.z[2];
+                int cover = 0;
+                for (int lane = 0; lane < 4; ++lane) {
+                    int x = qx + (lane & 1), y = qy + (lane >> 1);
+                    if (x < x0 || x > x1 || y < y0 || y > y1) continue; // owned by another tile or off-target
+                    if ((le[0][lane] + bias[0]) < 0 || (le[1][lane] + bias[1]) < 0 || (le[2][lane] + bias[2]) < 0)
+                        continue;
+                    cover |= 1 << lane;
+                }
+                if (!cover) continue;
 
-                if (draw.state.depthTest && !(z < depth[index])) continue;
+                // Screen-space barycentrics for all lanes, including helper lanes.
+                const F4 l0 = F4(float(le[0][0]), float(le[0][1]), float(le[0][2]), float(le[0][3])) * invArea;
+                const F4 l1 = F4(float(le[1][0]), float(le[1][1]), float(le[1][2]), float(le[1][3])) * invArea;
+                const F4 l2 = F4(float(le[2][0]), float(le[2][1]), float(le[2][2]), float(le[2][3])) * invArea;
+                const F4 z = l0 * z0 + l1 * z1 + l2 * z2;
+
+                // Early depth test.
+                float zs[4];
+                z.store(zs);
+                const size_t base = static_cast<size_t>(qy) * width + qx;
+                const size_t index[4] = {base, base + 1, base + width, base + width + 1};
+                int alive = 0;
+                for (int lane = 0; lane < 4; ++lane)
+                    if ((cover >> lane & 1) && (!depthTest || zs[lane] < depth[index[lane]])) alive |= 1 << lane;
+                if (!alive) continue;
 
                 if (!shade) {
-                    if (draw.state.depthWrite) depth[index] = z;
+                    if (depthWrite)
+                        for (int lane = 0; lane < 4; ++lane)
+                            if (alive >> lane & 1) depth[index[lane]] = zs[lane];
                     continue;
                 }
 
-                float b[3];
-                perspective(l0, l1, l2, b);
+                // Perspective-correct barycentrics: interpolate attribute/w and 1/w.
+                const F4 w0 = l0 * iw0, w1 = l1 * iw1, w2 = l2 * iw2;
+                const F4 sumW = max(w0 + w1 + w2, F4(1e-30f)); // helper lanes may extrapolate past w = 0
+                const F4 inv = F4(1.0f) / sumW;
+                const F4 b0 = w0 * inv, b1 = w1 * inv, b2 = w2 * inv;
+                quad.barycentric[0] = b0;
+                quad.barycentric[1] = b1;
+                quad.barycentric[2] = b2;
+                quad.depth = z;
+                quad.x = qx;
+                quad.y = qy;
                 for (int k = 0; k < varyingCount; ++k)
-                    varyings[k] = b[0] * vary[0][k] + b[1] * vary[1][k] + b[2] * vary[2][k];
+                    quad.varyings[k] = b0 * F4(vary[0][k]) + b1 * F4(vary[1][k]) + b2 * F4(vary[2][k]);
 
-                if (uvSlot >= 0) {
-                    // Evaluate the uv one pixel right and one pixel down (like a 2x2 quad).
-                    float bx[3], by[3];
-                    perspective(float(e0 + stepX[0]) * invArea, float(e1 + stepX[1]) * invArea,
-                                float(e2 + stepX[2]) * invArea, bx);
-                    perspective(float(e0 + stepY[0]) * invArea, float(e1 + stepY[1]) * invArea,
-                                float(e2 + stepY[2]) * invArea, by);
-                    Vec2 uv(varyings[uvSlot], varyings[uvSlot + 1]);
-                    frag.dUVdx = interpolateUv(bx) - uv;
-                    frag.dUVdy = interpolateUv(by) - uv;
+                V3 out;
+                M4 mask = M4::fromBits(alive);
+                fragments += static_cast<uint64_t>((alive & 1) + (alive >> 1 & 1) + (alive >> 2 & 1) + (alive >> 3 & 1));
+                if (m_simd) shader.fragmentQuad(quad, out, mask);
+                else shader.Shader::fragmentQuad(quad, out, mask); // scalar reference path
+                alive = mask.bits();
+                if (!alive) continue;
+
+                float r[4], g[4], b[4], viewDist[4];
+                out.x.store(r);
+                out.y.store(g);
+                out.z.store(b);
+                if (wire) inv.store(viewDist); // 1 / (1/w) = view distance
+
+                for (int lane = 0; lane < 4; ++lane) {
+                    if (!(alive >> lane & 1)) continue;
+                    Vec3 c(r[lane], g[lane], b[lane]);
+                    if (wire) {
+                        // Pixel distance to the nearest original mesh edge; edges created by
+                        // clipping are skipped so the overlay shows the real topology.
+                        constexpr float kFar = 1e30f;
+                        float d = std::min({(t.edgeMask & 1) ? float(le[0][lane]) * invEdgeLen[0] : kFar,
+                                            (t.edgeMask & 2) ? float(le[1][lane]) * invEdgeLen[1] : kFar,
+                                            (t.edgeMask & 4) ? float(le[2][lane]) * invEdgeLen[2] : kFar});
+                        // Fade with view distance so dense far-away geometry doesn't turn into ink.
+                        float fade = 1.0f - smoothstep(12.0f, 45.0f, viewDist[lane]);
+                        c = lerp(c, m_wireColor, (1.0f - smoothstep(0.4f, 1.2f, d)) * fade);
+                    }
+                    color[index[lane]] = c;
+                    if (depthWrite) depth[index[lane]] = zs[lane];
                 }
-
-                frag.barycentric = {b[0], b[1], b[2]};
-                frag.x = x;
-                frag.y = y;
-                frag.depth = z;
-
-                Vec3 out;
-                ++fragments;
-                if (!shader.fragment(frag, out)) continue;
-
-                if (m_wireframe && t.edgeMask) {
-                    // Pixel distance to the nearest original mesh edge; edges created by
-                    // clipping are skipped so the overlay shows the real topology.
-                    constexpr float kFar = 1e30f;
-                    float d = std::min({(t.edgeMask & 1) ? float(e0) * invEdgeLen[0] : kFar,
-                                        (t.edgeMask & 2) ? float(e1) * invEdgeLen[1] : kFar,
-                                        (t.edgeMask & 4) ? float(e2) * invEdgeLen[2] : kFar});
-                    // Fade with view distance (1/w interpolates linearly in screen space)
-                    // so dense far-away geometry doesn't turn into solid ink.
-                    float viewDist = 1.0f / (l0 * t.invW[0] + l1 * t.invW[1] + l2 * t.invW[2]);
-                    float fade = 1.0f - smoothstep(12.0f, 45.0f, viewDist);
-                    out = lerp(out, m_wireColor, (1.0f - smoothstep(0.4f, 1.2f, d)) * fade);
-                }
-
-                color[index] = out;
-                if (draw.state.depthWrite) depth[index] = z;
             }
 
-            rowStart[0] += stepY[0];
-            rowStart[1] += stepY[1];
-            rowStart[2] += stepY[2];
+            rowStart[0] += 2 * stepY[0];
+            rowStart[1] += 2 * stepY[1];
+            rowStart[2] += 2 * stepY[2];
         }
     }
 

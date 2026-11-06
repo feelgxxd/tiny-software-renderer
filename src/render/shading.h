@@ -5,6 +5,7 @@
 #include "core/shader.h"
 #include "core/texture.h"
 #include "math/math.h"
+#include "math/simd.h"
 
 namespace sr {
 
@@ -38,6 +39,9 @@ struct Environment {
     // Radiance arriving from direction dir; roughness blurs toward irradiance.
     Vec3 radiance(const Vec3& dir, float roughness = 0.0f) const;
     Vec3 irradiance(const Vec3& normal) const;
+    // 4-lane versions of the above.
+    V3 radiance4(const V3& dir, float roughness = 0.0f) const;
+    V3 irradiance4(const V3& normal) const;
 };
 
 class ShadowMap {
@@ -52,8 +56,11 @@ public:
     const Mat4& lightViewProj() const { return m_viewProj; }
     int size() const { return m_size; }
 
-    // Fraction of light reaching worldPos in [0, 1], 5x5 PCF.
+    // Fraction of light reaching worldPos in [0, 1] (bilinear-weighted 3x3 PCF).
     float visibility(const Vec3& worldPos, const Vec3& normal, const Vec3& lightDir) const;
+    // Same for 4 lanes; lanes not in laneMask return 0. Rows of 4 texels are
+    // compared with one SIMD load each.
+    F4 visibility4(const V3& worldPos, const V3& normal, const Vec3& lightDir, int laneMask) const;
 
 private:
     int m_size;
@@ -92,6 +99,8 @@ public:
 
     Vec4 vertex(const Vertex& in, float* out) const override;
     bool fragment(const FragmentInput& in, Vec3& color) const override;
+    // Same shading model as fragment(), evaluated for a 2x2 quad with SIMD.
+    void fragmentQuad(const QuadInput& in, V3& color, M4& alive) const override;
 };
 
 // Depth-only pass from the light's point of view.

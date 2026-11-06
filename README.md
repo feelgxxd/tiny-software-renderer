@@ -31,9 +31,17 @@ compiled to WebAssembly with pthreads. No WebGL is used for rendering.
   **top-left fill rule** (shared edges are never shaded twice or skipped, checked
   pixel-by-pixel on jittered meshes), and **homogeneous clipping** (Sutherland-Hodgman
   against the near/far planes plus a guard band).
+- **SIMD quad shading.** Pixels are shaded in 2×2 quads, as on a GPU, using one
+  4-wide vector type that maps to **SSE2, ARM NEON and WebAssembly SIMD128**, with a
+  portable scalar fallback. Shading math, texture filtering, shadow-map PCF and the sky
+  are vectorized, which is **2.2–2.4× faster per core** than the scalar reference shader.
+  UV derivatives for mip selection come from neighboring lanes, the software
+  equivalent of `dFdx`/`dFdy`.
 - **Programmable pipeline.** C++ vertex and fragment "shaders" with up to 16
-  perspective-correct varyings, plus **screen-space UV derivatives** (the software
-  equivalent of `dFdx`/`dFdy`) for hardware-style mip selection.
+  perspective-correct varyings. A shader can provide a SIMD quad function, or only a
+  scalar one that the pipeline runs per lane.
+- **Runs in the browser.** The same code compiles to WebAssembly with pthreads and
+  SIMD128 for the [live demo](https://feelgxxd.github.io/tiny-software-renderer/).
 - **Textures.** Linear-space mip chains, trilinear filtering, sRGB decoding, and
   repeat wrapping.
 - **Physically based shading.** Cook-Torrance BRDF (GGX / Smith / Schlick),
@@ -44,8 +52,9 @@ compiled to WebAssembly with pthreads. No WebGL is used for rendering.
 - **Tooling.** Headless CLI renderer, interactive viewer, debug views (wireframe,
   normals, lighting, mip level, depth), a per-tile cost heatmap, and a thread-scaling
   benchmark.
-- **Tested in CI** on Windows, Linux and macOS: unit tests, rasterization-rule tests,
-  a determinism test, and golden-image regression tests.
+- **Tested in CI** on Windows, Linux and macOS (x86-64 and ARM64): unit tests,
+  rasterization-rule tests, a determinism test, a SIMD-vs-scalar parity test, and
+  golden-image regression tests.
 
 ## Gallery
 
@@ -73,10 +82,10 @@ flowchart LR
     C --> D[Homogeneous clipping<br/>near/far + guard band]
     D --> E[Triangle setup<br/>fixed point, culling, bbox]
     E --> F[Binning<br/>64x64 tiles, in order]
-    F --> G[Tile rasterization<br/>one thread per tile]
+    F --> G[Tile rasterization<br/>one thread per tile, 2x2 quads]
     G --> H[Early depth test]
-    H --> I[Fragment shading<br/>PBR, shadows, textures]
-    I --> J[Resolve<br/>ACES + sRGB]
+    H --> I[SIMD fragment shading<br/>PBR, shadows, textures]
+    I --> J[Sky fill + resolve<br/>ACES + sRGB]
 ```
 
 1. **Geometry** (`Renderer::draw`): every unique vertex is shaded once, in parallel
@@ -90,36 +99,53 @@ flowchart LR
    for culling, and the winding is normalized so the inner loop only handles one
    orientation.
 4. **Raster** (`Renderer::end`): tiles are distributed to workers through an atomic
-   counter. Each worker runs incremental integer edge functions, applies the top-left
-   bias, computes perspective-correct barycentrics, runs an early depth test, and then
-   calls the fragment shader.
+   counter. Each worker walks the triangle in 2×2 quads with incremental integer edge
+   functions and the top-left bias. It then computes perspective-correct barycentrics
+   for the 4 lanes at once, runs an early depth test, and calls the shader's quad
+   function. Lanes outside the triangle still get extrapolated attributes ("helper
+   lanes") so derivatives are defined, but they are never written.
+5. **Sky**: after the main pass, only pixels that no geometry covered are filled. The
+   view ray is linear in screen x, so this also runs 4 pixels per iteration.
+
+For a longer explanation with diagrams, see **[How it works](docs/how-it-works.md)**.
 
 The source is organized in layers:
 
 ```
-src/math      Vec2/3/4, Mat4 (column vectors, OpenGL conventions)
+src/math      Vec2/3/4, Mat4 (column vectors, OpenGL conventions), F4/V3 SIMD types
 src/core      ThreadPool, Renderer (clip/setup/bin/raster), Framebuffer, Texture, Shader API
 src/geometry  Mesh, OBJ loader, procedural primitives, tangent generation
 src/render    PBR + shadow shaders, ShadowMap, sky, scenes, procedural textures
-apps/         sr_render (headless CLI), sr_viewer (SDL2 window)
-tests/        unit, raster-rule, determinism and golden-image tests
+apps/         sr_render (headless CLI), sr_viewer (SDL2 window), sr_web (WebAssembly)
+web/          live demo page and build script
+tests/        unit, raster-rule, determinism, SIMD parity and golden-image tests
 ```
 
 ## Performance
 
-Measured at 1280×720 on an AMD Ryzen AI 7 350 (8 cores / 16 threads), Release build,
-including the shadow pass, sky and all shading (`sr_render --scene all --bench`):
+Measured at 1280×720 on an AMD Ryzen AI 7 350 laptop (8 cores / 16 threads, SSE2
+build), median of 25 frames under sustained load. Each frame includes the shadow pass,
+the sky and all shading (`sr_render --scene all --bench`):
 
-| Scene | Triangles | 1 thread | 16 threads | Speedup |
-|---|---:|---:|---:|---:|
-| materials (12 PBR spheres) | 63,104 | 121.8 ms | **17.5 ms (57 FPS)** | 6.9× |
-| shadows (normal-mapped, animated) | 14,348 | 154.9 ms | **18.4 ms (54 FPS)** | 8.4× |
-| textures (trilinear corridor) | 4,752 | 132.6 ms | **15.6 ms (64 FPS)** | 8.5× |
-| spot (OBJ + texture) | 9,056 | 131.3 ms | **15.3 ms (65 FPS)** | 8.6× |
+| Scene | Triangles | Scalar, 1 thread | SIMD, 1 thread | SIMD, 16 threads | SIMD gain | Total |
+|---|---:|---:|---:|---:|---:|---:|
+| materials (12 PBR spheres) | 63,104 | 108.1 ms | 85.0 ms | **12.6 ms (79 FPS)** | 1.27× | 8.6× |
+| shadows (normal-mapped, animated) | 14,348 | 203.5 ms | 91.8 ms | **9.0 ms (111 FPS)** | 2.22× | 22.5× |
+| textures (trilinear corridor) | 4,752 | 176.6 ms | 75.6 ms | **6.7 ms (149 FPS)** | 2.34× | 26.4× |
+| spot (OBJ + texture) | 9,056 | 169.6 ms | 77.2 ms | **7.4 ms (135 FPS)** | 2.20× | 22.9× |
 
-The speedup slightly exceeds the 8 physical cores. A likely cause is SMT hiding the
-memory latency of texture and shadow-map fetches. The viewer's **H** key shows which
-tiles cost the most.
+- **SIMD gain is lowest on `materials`.** Its spheres are made of many small triangles,
+  so many quads are only partly covered, and the helper lanes do work that is thrown
+  away. GPUs pay the same "quad overdraw" cost on small triangles.
+- **Thread scaling is 6.7–11.2× on 8 physical cores.** SMT helps because much of the
+  time is spent waiting on texture and shadow-map memory reads.
+- **Single-thread numbers are higher than short runs.** A laptop CPU cannot hold its
+  boost clock under sustained single-core load.
+- In the browser (WebAssembly SIMD128 with 16 workers, 960×540), the same scenes render
+  in 5–14 ms.
+
+The viewer's **H** key shows which tiles cost the most, and **X** switches between the
+SIMD and scalar shading paths.
 
 ## Building
 
@@ -161,7 +187,9 @@ sr_render --scene materials --width 1920 --height 1080 --out renders/materials.p
 sr_render --scene textures --view mips          # debug views: albedo normals lighting mips depth
 sr_render --scene spot --wireframe
 sr_render --scene shadows --frames 120 --fps 30 # image sequence
-sr_render --scene all --bench                   # thread-scaling table
+sr_render --scene all --bench                   # scalar vs. SIMD, 1 vs. all threads
+sr_render --scene all --bench-threads           # 1, 2, 4, ... N threads
+sr_render --scene shadows --no-simd             # scalar reference shading path
 ```
 
 | Viewer key | Action |
@@ -172,6 +200,7 @@ sr_render --scene all --bench                   # thread-scaling table
 | `F` | Wireframe overlay |
 | `S` | Toggle shadows |
 | `T` | Switch between 1 thread and all threads |
+| `X` | Switch between SIMD and scalar shading |
 | `H` | Per-tile cost heatmap |
 | `[` / `]` | Render scale |
 | `Space` / `P` / `R` | Pause animation / screenshot / reset camera |
@@ -187,13 +216,20 @@ sr_render --scene all --bench                   # thread-scaling table
   the expected coverage
 - **Culling**: counter-clockwise front faces
 - **Determinism**: 1-thread and 8-thread renders are compared byte for byte
+- **SIMD parity**: the vectorized quad shader must match the scalar reference shader
+  (mean difference under 0.25/255), plus unit tests for the vector `floor`/`exp2`/masks
+- **Thread pool**: every work item runs exactly once whatever the active thread count
 - **Golden images**: the scenes are compared against `tests/golden/*.png`, with
   tolerances for floating-point differences between compilers
   (`sr_tests --update-golden` regenerates the references)
 
+The suite passes with MSVC, GCC and Clang on the SSE2 backend, on ARM64 with the NEON
+backend, and with the scalar fallback (`-DSR_SIMD_SCALAR=ON`).
+
 ## Roadmap
 
-- [ ] SIMD fragment pipeline (2×2 quads in SSE/AVX2 and NEON)
+- [x] SIMD quad shading (SSE2, NEON, WebAssembly SIMD128)
+- [x] WebAssembly build with a live demo
 - [ ] Hierarchical-Z tile rejection
 - [ ] MSAA and alpha blending with an order-preserving transparent pass
 - [ ] Image-based lighting from HDR environment maps

@@ -296,4 +296,194 @@ bool PbrShader::fragment(const FragmentInput& in, Vec3& color) const
     return true;
 }
 
+// ---------------------------------------------------------------------------
+// SIMD quad path. Mirrors fragment() above; texture and shadow-map fetches
+// are gathers, so they run per lane, everything else runs 4-wide.
+
+namespace {
+
+inline V3 splat(float s) { return V3(Vec3(s)); }
+
+} // namespace
+
+V3 Environment::irradiance4(const V3& n) const
+{
+    const Vec3 below = lerp(ground, horizon * 0.55f, 0.35f);
+    const Vec3 above = lerp(horizon, zenith, 0.5f);
+    F4 t = smoothstep(0.0f, 1.0f, n.y * F4(0.5f) + F4(0.5f));
+    return lerp(V3(below), V3(above), t) * F4(intensity);
+}
+
+V3 Environment::radiance4(const V3& dir, float roughness) const
+{
+    const F4 zero(0.0f);
+    F4 up = sqrt(max(dir.y, zero));
+    F4 down = sqrt(sqrt(max(-dir.y, zero)));
+    V3 sky = lerp(V3(horizon), V3(zenith), up);
+    V3 below = lerp(V3(horizon * 0.55f), V3(ground), down);
+    V3 sharp = select(dir.y >= zero, sky, below) * F4(intensity);
+    if (roughness <= 0.0f) return sharp;
+    return lerp(sharp, irradiance4(dir), F4(roughness * roughness));
+}
+
+F4 ShadowMap::visibility4(const V3& worldPos, const V3& normal, const Vec3& lightDir, int laneMask) const
+{
+    // Normal-offset bias and light-space projection, 4 lanes at once.
+    const F4 one(1.0f);
+    const F4 nDotL = clamp01(dot(normal, V3(lightDir)));
+    const V3 p = worldPos + normal * (F4(m_texelWorld) * (one + F4(2.0f) * (one - nDotL)));
+    const Mat4& m = m_viewProj;
+    const F4 cx = F4(m.m[0][0]) * p.x + F4(m.m[0][1]) * p.y + F4(m.m[0][2]) * p.z + F4(m.m[0][3]);
+    const F4 cy = F4(m.m[1][0]) * p.x + F4(m.m[1][1]) * p.y + F4(m.m[1][2]) * p.z + F4(m.m[1][3]);
+    const F4 cz = F4(m.m[2][0]) * p.x + F4(m.m[2][1]) * p.y + F4(m.m[2][2]) * p.z + F4(m.m[2][3]);
+
+    float us[4], vs[4], ds[4];
+    (cx * F4(0.5f) + F4(0.5f)).store(us);
+    (F4(0.5f) - cy * F4(0.5f)).store(vs);
+    (cz * F4(0.5f) + F4(0.5f) - F4(0.0008f)).store(ds);
+
+    const float* depth = m_depth.depthData();
+    float result[4] = {};
+    for (int lane = 0; lane < 4; ++lane) {
+        if (!(laneMask >> lane & 1)) continue;
+        const float u = us[lane], v = vs[lane], d = ds[lane];
+        if (u < 0.0f || u > 1.0f || v < 0.0f || v > 1.0f || d > 1.0f) {
+            result[lane] = 1.0f;
+            continue;
+        }
+        const float sx = u * m_size - 0.5f, sy = v * m_size - 0.5f;
+        const float bx = std::floor(sx), by = std::floor(sy);
+        const float fx = sx - bx, fy = sy - by;
+        const int x0 = static_cast<int>(bx) - 1, y0 = static_cast<int>(by) - 1;
+        const float wy[4] = {1.0f - fy, 1.0f, 1.0f, fy};
+        const F4 wx(1.0f - fx, 1.0f, 1.0f, fx);
+        const F4 ref(d);
+
+        if (x0 >= 0 && x0 + 3 < m_size && y0 >= 0 && y0 + 3 < m_size) {
+            // Interior: each 4-texel row is one unaligned SIMD load + compare.
+            F4 acc(0.0f);
+            const float* row = depth + static_cast<size_t>(y0) * m_size + x0;
+            for (int j = 0; j < 4; ++j, row += m_size)
+                acc += select(ref <= F4::load(row), wx, F4(0.0f)) * F4(wy[j]);
+            float a[4];
+            acc.store(a);
+            result[lane] = (a[0] + a[1] + a[2] + a[3]) * (1.0f / 9.0f);
+        } else {
+            result[lane] = visibility(worldPos.lane(lane), normal.lane(lane), lightDir);
+        }
+    }
+    return F4::load(result);
+}
+
+void PbrShader::fragmentQuad(const QuadInput& in, V3& color, M4& alive) const
+{
+    const FrameUniforms& f = *frame;
+    // Rare debug views reuse the scalar shader (still fed with quad derivatives).
+    if (f.view == DebugView::MipLevel || f.view == DebugView::Depth) {
+        Shader::fragmentQuad(in, color, alive);
+        return;
+    }
+
+    const F4* v = in.varyings;
+    const int bits = alive.bits();
+    const V3 p(v[kWorldPos], v[kWorldPos + 1], v[kWorldPos + 2]);
+    V3 n = normalize(V3(v[kNormal], v[kNormal + 1], v[kNormal + 2]));
+    if (!in.frontFacing) n = -n;
+
+    // Texture coordinates, and one LOD per quad from coarse derivatives (like GPUs).
+    const Vec2 dUVdx(in.ddx(v[kUv]), in.ddx(v[kUv + 1]));
+    const Vec2 dUVdy(in.ddy(v[kUv]), in.ddy(v[kUv + 1]));
+    auto sampleLanes = [&](const Texture& tex) {
+        return tex.sampleQuad(v[kUv], v[kUv + 1], tex.computeLod(dUVdx, dUVdy), bits);
+    };
+
+    if (material.normalMap) {
+        V3 t(v[kTangent], v[kTangent + 1], v[kTangent + 2]);
+        t = normalize(t - n * dot(n, t));
+        V3 b = cross(n, t) * select(v[kTangent + 3] < F4(0.0f), F4(-1.0f), F4(1.0f));
+        V3 s = sampleLanes(*material.normalMap);
+        const F4 strength(material.normalStrength);
+        F4 tx = (s.x * F4(2.0f) - F4(1.0f)) * strength;
+        F4 ty = (s.y * F4(2.0f) - F4(1.0f)) * strength;
+        F4 tz = s.z * F4(2.0f) - F4(1.0f);
+        n = normalize(t * tx + b * ty + n * tz);
+    }
+
+    V3 albedo(material.albedo);
+    if (material.albedoMap) albedo = albedo * sampleLanes(*material.albedoMap);
+
+    if (f.view == DebugView::Albedo) {
+        color = albedo;
+        return;
+    }
+    if (f.view == DebugView::Normals) {
+        auto encode = [](float c) { return srgbToLinear(clamp01(c * 0.5f + 0.5f)); };
+        color = V3(map(n.x, encode), map(n.y, encode), map(n.z, encode));
+        return;
+    }
+    if (f.view == DebugView::Lighting) albedo = splat(0.75f);
+
+    const float metallic = material.metallic;
+    const float roughness = std::clamp(material.roughness, 0.04f, 1.0f);
+    const F4 one(1.0f);
+    const Vec3 Ls = -normalize(f.light.direction);
+    const V3 L(Ls);
+    const V3 V = normalize(V3(f.cameraPos) - p);
+    const V3 H = normalize(V + L);
+    const F4 nDotV = max(dot(n, V), F4(1e-4f));
+    const F4 nDotL = max(dot(n, L), F4(0.0f));
+    const V3 f0 = lerp(splat(0.04f), albedo, F4(metallic));
+
+    V3 result(material.emissive);
+
+    // Direct light.
+    const M4 lit = (nDotL > F4(0.0f)) & alive;
+    if (lit.any()) {
+        const F4 shadow = f.shadow ? f.shadow->visibility4(p, n, Ls, lit.bits()) : one;
+
+        const F4 nDotH = max(dot(n, H), F4(0.0f));
+        const F4 m = one - clamp01(dot(H, V));
+        const F4 m2 = m * m;
+        const V3 F = f0 + (splat(1.0f) - f0) * (m2 * m2 * m);
+
+        const float a = roughness * roughness, a2 = a * a;
+        const F4 d = nDotH * nDotH * F4(a2 - 1.0f) + one;
+        const F4 D = F4(a2) / (F4(kPi) * d * d);
+
+        const float k = (roughness + 1.0f) * (roughness + 1.0f) / 8.0f;
+        const F4 G = (nDotV / (nDotV * F4(1.0f - k) + F4(k))) * (nDotL / (nDotL * F4(1.0f - k) + F4(k)));
+
+        const V3 specular = F * (D * G / (F4(4.0f) * nDotV * nDotL + F4(1e-4f)));
+        const V3 kd = (splat(1.0f) - F) * F4(1.0f - metallic);
+        const Vec3 radiance = f.light.color * f.light.intensity;
+        result += (kd * albedo * F4(1.0f / kPi) + specular) * V3(radiance) * (nDotL * shadow);
+    }
+
+    // Ambient: split-sum environment BRDF (Karis) with the analytic sky.
+    {
+        const float r0 = -1.0f * roughness + 1.0f, r1 = -0.0275f * roughness + 0.0425f;
+        const float r2 = -0.572f * roughness + 1.04f, r3 = 0.022f * roughness - 0.04f;
+        const F4 a004 = min(F4(r0 * r0), exp2(F4(-9.28f) * nDotV)) * F4(r0) + F4(r1);
+        const F4 A = F4(-1.04f) * a004 + F4(r2);
+        const F4 B = F4(1.04f) * a004 + F4(r3);
+        const V3 envSpec = f0 * A + V3(B, B, B);
+        const V3 kdAmbient = (splat(1.0f) - envSpec) * F4(1.0f - metallic);
+        const V3 R = reflect(-V, n);
+        const F4 horizonFade = clamp01(one + F4(1.2f) * dot(R, n));
+        result += kdAmbient * albedo * f.env.irradiance4(n);
+        result += envSpec * f.env.radiance4(R, roughness) * (horizonFade * horizonFade);
+    }
+
+    if (f.fogDensity > 0.0f) {
+        const V3 toCam = V3(f.cameraPos) - p;
+        const F4 dist = sqrt(dot(toCam, toCam)) * F4(f.fogDensity);
+        const F4 fog = one - exp(-(dist * dist));
+        const V3 viewDir = -V;
+        const V3 horizonDir = normalize(V3(viewDir.x, max(viewDir.y, F4(0.0f)), viewDir.z));
+        result = lerp(result, f.env.radiance4(horizonDir, 0.0f), fog);
+    }
+
+    color = result;
+}
+
 } // namespace sr

@@ -140,6 +140,8 @@
         <div class="threads-head"><span>Worker threads</span><b id="threadsLabel">–</b></div>
         <input type="range" id="threads" min="1" max="1" value="1">
         <div class="note" id="threadNote"></div>
+        <div class="row" style="margin-top:6px">SIMD quad shading <label class="switch"><input type="checkbox" id="simd" checked><span></span></label></div>
+        <div class="note" id="simdNote"></div>
         <div class="row" style="margin-top:6px">Resolution
           <div class="seg" id="scale" style="width:150px"><button data-v="1">100%</button><button data-v="0.5">50%</button></div>
         </div>
@@ -155,7 +157,8 @@
 
   <section class="explain">
     <div class="card"><h3>Tile-based and parallel</h3><p>Triangles are binned into 64×64 pixel tiles. Each tile is rasterized by a single worker thread, so the color and depth buffers need no locks and the image is identical for any thread count. Try the thread slider and the heatmap.</p></div>
-    <div class="card"><h3>Correct rasterization</h3><p>Sub-pixel fixed-point edge functions with the top-left fill rule, homogeneous near-plane clipping, perspective-correct interpolation, and screen-space UV derivatives for mip selection.</p></div>
+    <div class="card"><h3>Correct rasterization</h3><p>Sub-pixel fixed-point edge functions with the top-left fill rule, homogeneous near-plane clipping, and perspective-correct interpolation. Pixels are shaded in 2×2 quads, so UV derivatives for mip selection come from neighboring lanes, as on a GPU.</p></div>
+    <div class="card"><h3>SIMD everywhere</h3><p>One 4-wide vector type maps to SSE2, ARM NEON and WebAssembly SIMD128. Shading math, texture filtering, shadow-map PCF and the sky are all vectorized. Here it runs as WebAssembly SIMD128.</p></div>
     <div class="card"><h3>Physically based shading</h3><p>Cook-Torrance GGX with metallic/roughness materials, normal mapping, soft PCF shadow maps, sky lighting, and ACES tone mapping, all in C++ fragment "shaders".</p></div>
   </section>
 
@@ -201,6 +204,7 @@
   bindSwitch("shadows", "sr_set_shadows");
   bindSwitch("heat", "sr_set_heatmap");
   bindSwitch("pause", "sr_set_paused");
+  bindSwitch("simd", "sr_set_simd");
   $("reset").addEventListener("click", () => call("sr_reset_camera"));
   $("threads").addEventListener("input", (e) => {
     $("threadsLabel").textContent = e.target.value;
@@ -225,6 +229,7 @@
       ["Triangles rasterized", fmt(s.rasterized)],
       ["Back-face culled", fmt(s.culled)],
       ["Fragments shaded", fmt(s.fragments)],
+      ["Shading path", s.simd ? `SIMD (${s.backend})` : "scalar"],
       ["Build", threaded ? "wasm + pthreads" : "wasm (single thread)"],
     ];
     $("stats").innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
@@ -253,6 +258,7 @@
           ? "Single-threaded build (forced by ?single). Remove it from the URL to use all cores."
           : "This browser did not enable cross-origin isolation, so the single-threaded build is running.";
       $("threadNote").classList.toggle("warn", !threaded);
+      $("simdNote").textContent = `Shades 2×2 pixel quads with ${s.backend} vectors. Turn off to compare with the scalar reference shader.`;
       $("overlay").classList.add("hidden");
       updateStats();
       setInterval(updateStats, 250);

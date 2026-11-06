@@ -5,6 +5,7 @@ option(SR_BUILD_VIEWER "Build the SDL2 interactive viewer" ON)
 option(SR_BUILD_TESTS "Build the test suite" ON)
 option(SR_NATIVE_ARCH "Optimize for the build machine's CPU (-march=native / AVX2)" OFF)
 option(SR_WEB_THREADS "WebAssembly: build with pthreads (needs cross-origin isolation)" ON)
+option(SR_SIMD_SCALAR "Use the portable scalar fallback instead of SSE2/NEON/WASM SIMD" OFF)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,10 +18,19 @@ endif()
 # Put every executable next to each other (and next to SDL2.dll on Windows).
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+if(SR_SIMD_SCALAR)
+    add_compile_definitions(SR_SIMD_SCALAR)
+endif()
+
 if(EMSCRIPTEN)
     # The web build is just the viewer; every object must agree on -pthread.
     set(SR_BUILD_VIEWER OFF)
     set(SR_BUILD_TESTS OFF)
+    # WebAssembly SIMD128 (supported by all current major browsers).
+    if(NOT SR_SIMD_SCALAR)
+        add_compile_options(-msimd128)
+        add_link_options(-msimd128)
+    endif()
     if(SR_WEB_THREADS)
         add_compile_options(-pthread)
         add_link_options(-pthread)
@@ -33,6 +43,7 @@ add_library(sr_core STATIC
     src/core/framebuffer.cpp
     src/core/image_io.cpp
     src/core/renderer.cpp
+    src/core/shader.cpp
     src/core/texture.cpp
     src/core/thread_pool.cpp
     src/geometry/mesh.cpp

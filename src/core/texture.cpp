@@ -101,8 +101,8 @@ Vec4 Texture::sampleNearest(Vec2 uv, int level) const
 Vec4 Texture::sampleBilinear(Vec2 uv, int level) const
 {
     const Level& l = m_levels[std::clamp(level, 0, levelCount() - 1)];
-    float fx = uv.x * l.width - 0.5f;
-    float fy = uv.y * l.height - 0.5f;
+    float fx = std::clamp(uv.x * l.width - 0.5f, -1.0e7f, 1.0e7f);
+    float fy = std::clamp(uv.y * l.height - 0.5f, -1.0e7f, 1.0e7f);
     float flx = std::floor(fx), fly = std::floor(fy);
     float tx = fx - flx, ty = fy - fly;
     int x0 = wrap(static_cast<int>(flx), l.width), x1 = wrap(x0 + 1, l.width);
@@ -111,6 +111,49 @@ Vec4 Texture::sampleBilinear(Vec2 uv, int level) const
     Vec4 top = l.at(x0, y0) * (1.0f - tx) + l.at(x1, y0) * tx;
     Vec4 bottom = l.at(x0, y1) * (1.0f - tx) + l.at(x1, y1) * tx;
     return top * (1.0f - ty) + bottom * ty;
+}
+
+V3 Texture::bilinearQuad(const F4& u, const F4& v, int level, int laneMask) const
+{
+    const Level& l = m_levels[std::clamp(level, 0, levelCount() - 1)];
+    // Clamp keeps float->int conversion defined even for wild helper-lane coordinates.
+    const F4 limit(1.0e7f);
+    const F4 fx = min(max(u * F4(static_cast<float>(l.width)) - F4(0.5f), -limit), limit);
+    const F4 fy = min(max(v * F4(static_cast<float>(l.height)) - F4(0.5f), -limit), limit);
+    const F4 flx = floor(fx), fly = floor(fy);
+    const F4 tx = fx - flx, ty = fy - fly;
+
+    float xs[4], ys[4];
+    flx.store(xs);
+    fly.store(ys);
+    // Gather the 2x2 texel footprint of every lane into SoA arrays.
+    float c[4][3][4] = {}; // [corner][channel][lane]
+    for (int lane = 0; lane < 4; ++lane) {
+        if (!(laneMask >> lane & 1)) continue;
+        int x0 = wrap(static_cast<int>(xs[lane]), l.width), x1 = wrap(x0 + 1, l.width);
+        int y0 = wrap(static_cast<int>(ys[lane]), l.height), y1 = wrap(y0 + 1, l.height);
+        const Vec4* t[4] = {&l.at(x0, y0), &l.at(x1, y0), &l.at(x0, y1), &l.at(x1, y1)};
+        for (int k = 0; k < 4; ++k) {
+            c[k][0][lane] = t[k]->x;
+            c[k][1][lane] = t[k]->y;
+            c[k][2][lane] = t[k]->z;
+        }
+    }
+    auto corner = [&](int k) { return V3(F4::load(c[k][0]), F4::load(c[k][1]), F4::load(c[k][2])); };
+    const V3 top = lerp(corner(0), corner(1), tx);
+    const V3 bottom = lerp(corner(2), corner(3), tx);
+    return lerp(top, bottom, ty);
+}
+
+V3 Texture::sampleQuad(const F4& u, const F4& v, float lod, int laneMask) const
+{
+    const float maxLod = static_cast<float>(levelCount() - 1);
+    lod = std::clamp(lod, 0.0f, maxLod);
+    const int l0 = static_cast<int>(lod);
+    const float t = lod - static_cast<float>(l0);
+    V3 a = bilinearQuad(u, v, l0, laneMask);
+    if (t <= 0.0f || l0 + 1 >= levelCount()) return a;
+    return lerp(a, bilinearQuad(u, v, l0 + 1, laneMask), F4(t));
 }
 
 Vec4 Texture::sampleTrilinear(Vec2 uv, float lod) const
@@ -129,7 +172,8 @@ float Texture::computeLod(Vec2 dUVdx, Vec2 dUVdy) const
 {
     Vec2 size(static_cast<float>(width()), static_cast<float>(height()));
     float rho2 = std::max(dot(dUVdx * size, dUVdx * size), dot(dUVdy * size, dUVdy * size));
-    return rho2 <= 1.0f ? 0.0f : 0.5f * std::log2(rho2);
+    if (!(rho2 > 1.0f)) return 0.0f; // also catches NaN from degenerate derivatives
+    return 0.5f * std::log2(rho2);
 }
 
 Vec4 Texture::sample(Vec2 uv, Vec2 dUVdx, Vec2 dUVdy) const

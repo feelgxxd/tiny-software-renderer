@@ -31,6 +31,7 @@ EMSCRIPTEN_KEEPALIVE void sr_set_wireframe(int on) { g_app->setWireframe(on != 0
 EMSCRIPTEN_KEEPALIVE void sr_set_shadows(int on) { g_app->setShadows(on != 0); }
 EMSCRIPTEN_KEEPALIVE void sr_set_heatmap(int on) { g_app->setHeatmap(on != 0); }
 EMSCRIPTEN_KEEPALIVE void sr_set_paused(int on) { g_app->setPaused(on != 0); }
+EMSCRIPTEN_KEEPALIVE void sr_set_simd(int on) { g_app->setSimd(on != 0); }
 EMSCRIPTEN_KEEPALIVE void sr_set_threads(int n) { g_app->setThreadCount(n); }
 EMSCRIPTEN_KEEPALIVE void sr_set_scale(float scale) { g_app->setRenderScale(scale); }
 EMSCRIPTEN_KEEPALIVE void sr_reset_camera() { g_app->resetCamera(); }

@@ -1,10 +1,12 @@
 #include "test.h"
 
 #include "core/texture.h"
+#include "core/thread_pool.h"
 #include "geometry/mesh.h"
 #include "math/math.h"
 
 #include <cstdio>
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 
@@ -90,6 +92,29 @@ TEST_CASE("mesh: OBJ quads, negative indices and vertex de-duplication")
 
     Mesh missing;
     CHECK(!missing.loadObj("does/not/exist.obj"));
+}
+
+TEST_CASE("thread pool: every item runs once for any active thread count")
+{
+    ThreadPool pool(8);
+    CHECK(pool.capacity() == 8);
+    for (int active : {8, 1, 3, 8, 2}) {
+        pool.setActiveThreads(active);
+        CHECK(pool.threadCount() == active);
+        std::vector<std::atomic<int>> hits(1000);
+        std::atomic<int> maxWorker{0};
+        pool.parallelFor(1000, [&](int item, int worker) {
+            hits[item].fetch_add(1);
+            int seen = maxWorker.load();
+            while (worker > seen && !maxWorker.compare_exchange_weak(seen, worker)) {}
+        });
+        bool once = true;
+        for (auto& h : hits) once = once && h.load() == 1;
+        CHECK(once);
+        CHECK(maxWorker.load() < active);
+    }
+    pool.setActiveThreads(100); // clamped to capacity
+    CHECK(pool.threadCount() == 8);
 }
 
 TEST_CASE("mesh: procedural primitives are closed and outward-facing")

@@ -38,6 +38,7 @@ public:
     void setShadows(bool on) { m_settings.shadows = on; }
     void setHeatmap(bool on) { m_heatmap = on; }
     void setPaused(bool on) { m_paused = on; }
+    void setSimd(bool on) { m_renderer->setSimdShading(on); }
     void setThreadCount(int n);
     void setRenderScale(float scale);
     void resetCamera() { m_camera = m_scene.camera; }

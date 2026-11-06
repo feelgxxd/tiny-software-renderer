@@ -170,12 +170,13 @@ TEST_CASE("raster: back-face culling follows counter-clockwise front faces")
 
 namespace {
 
-Framebuffer renderScene(const std::string& name, int threads)
+Framebuffer renderScene(const std::string& name, int threads, bool simd = true)
 {
     Scene scene;
     std::string error;
     if (!buildScene(name, SR_ASSET_DIR, scene, &error)) return Framebuffer();
     Renderer renderer(threads);
+    renderer.setSimdShading(simd);
     SceneRenderer sceneRenderer;
     RenderSettings settings;
     settings.shadowMapSize = 1024;
@@ -197,6 +198,40 @@ TEST_CASE("scenes: output is bit-identical for 1 and 8 threads")
         if (!same) std::printf("    scene %s differs between thread counts\n", name);
         CHECK(same);
     }
+}
+
+TEST_CASE("scenes: SIMD quad shading matches the scalar reference shader")
+{
+    // Same shading model, different arithmetic order and SIMD exp2/texture paths:
+    // results must agree to within a fraction of an 8-bit step on average.
+    for (const char* name : {"materials", "shadows", "textures"}) {
+        Framebuffer a = renderScene(name, 4, true);
+        Framebuffer b = renderScene(name, 4, false);
+        double sum = 0.0, worst = 0.0;
+        const size_t n = static_cast<size_t>(a.width()) * a.height();
+        for (size_t i = 0; i < n; ++i) {
+            Vec3 ca = toneMapAces(a.colorData()[i]), cb = toneMapAces(b.colorData()[i]);
+            double d = (std::fabs(ca.x - cb.x) + std::fabs(ca.y - cb.y) + std::fabs(ca.z - cb.z)) / 3.0;
+            sum += d;
+            worst = std::max(worst, d);
+        }
+        double mean = sum / n * 255.0;
+        if (mean > 0.25) std::printf("    %s: mean diff %.3f/255, worst %.1f/255\n", name, mean, worst * 255.0);
+        CHECK(mean <= 0.25);
+    }
+}
+
+TEST_CASE("simd: exp2 approximation and floor")
+{
+    for (float x : {-20.0f, -9.28f, -3.3f, -1.0f, -0.5f, 0.0f, 0.25f, 1.0f, 7.75f, 20.0f}) {
+        float approx = exp2(F4(x)).lane(0);
+        CHECK_NEAR(approx / std::exp2(x), 1.0, 5e-7);
+        CHECK_NEAR(floor(F4(x)).lane(0), std::floor(x), 0.0);
+    }
+    M4 m = F4(1, 2, 3, 4) < F4(2.5f);
+    CHECK(m.bits() == 0x3);
+    CHECK(M4::fromBits(0x9).bits() == 0x9);
+    CHECK_NEAR(select(m, F4(1.0f), F4(-1.0f)).lane(3), -1.0, 0.0);
 }
 
 TEST_CASE("scenes: golden image regression")

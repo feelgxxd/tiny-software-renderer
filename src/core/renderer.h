@@ -60,6 +60,10 @@ public:
     void setWireframeOverlay(bool enabled, Vec3 color = {0.02f, 0.02f, 0.02f});
     // Debug: records time spent per tile (see tileTimesMs()).
     void setTileTiming(bool enabled) { m_tileTiming = enabled; }
+    // SIMD quad shading (default) vs. the scalar per-pixel reference path.
+    void setSimdShading(bool enabled) { m_simd = enabled; }
+    bool simdShading() const { return m_simd; }
+    static const char* simdBackend() { return SR_SIMD_BACKEND; }
 
     void begin(Framebuffer& target);
     void draw(const Mesh& mesh, const Shader& shader, const DrawState& state = {});
@@ -90,6 +94,7 @@ private:
     bool m_wireframe = false;
     Vec3 m_wireColor;
     bool m_tileTiming = false;
+    bool m_simd = true;
 
     std::vector<DrawRecord> m_draws;
     std::vector<Triangle> m_triangles;

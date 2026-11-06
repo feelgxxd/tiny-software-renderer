@@ -18,6 +18,13 @@ ThreadPool::ThreadPool(int threadCount)
     // The calling thread participates, so spawn threadCount - 1 workers.
     for (int i = 1; i < threadCount; ++i)
         m_workers.emplace_back([this, i] { workerLoop(i); });
+    m_activeThreads = threadCount;
+}
+
+void ThreadPool::setActiveThreads(int count)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_activeThreads = std::clamp(count, 1, capacity());
 }
 
 ThreadPool::~ThreadPool()
@@ -48,6 +55,8 @@ void ThreadPool::workerLoop(int workerIndex)
             m_wake.wait(lock, [&] { return m_stop || m_generation != seenGeneration; });
             if (m_stop) return;
             seenGeneration = m_generation;
+            // Workers beyond the active count sit this job out (and aren't waited for).
+            if (workerIndex >= m_jobThreads) continue;
         }
 
         runItems(workerIndex);
@@ -63,7 +72,12 @@ void ThreadPool::parallelFor(int itemCount, const std::function<void(int, int)>&
 {
     if (itemCount <= 0) return;
 
-    if (m_workers.empty() || itemCount == 1) {
+    int threads;
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        threads = m_activeThreads;
+    }
+    if (threads <= 1 || itemCount == 1) {
         for (int i = 0; i < itemCount; ++i) fn(i, 0);
         return;
     }
@@ -73,7 +87,8 @@ void ThreadPool::parallelFor(int itemCount, const std::function<void(int, int)>&
         m_job = &fn;
         m_itemCount = itemCount;
         m_nextItem.store(0, std::memory_order_relaxed);
-        m_activeWorkers = static_cast<int>(m_workers.size());
+        m_jobThreads = threads;
+        m_activeWorkers = threads - 1;
         ++m_generation;
     }
     m_wake.notify_all();

@@ -19,6 +19,7 @@ static const char* kHelp =
     "  S              toggle shadows      T          1 thread <-> all threads\n"
     "  H              tile cost heatmap   [ / ]      render scale\n"
     "  Space          pause animation     P          save screenshot\n"
+    "  X              SIMD <-> scalar shading\n"
     "  Esc            quit\n";
 
 int main(int argc, char** argv)

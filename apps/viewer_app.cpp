@@ -102,6 +102,7 @@ void ViewerApp::handleEvent(const SDL_Event& e)
         else if (k == SDLK_LEFTBRACKET) setRenderScale(m_renderScale * 0.5f);
         else if (k == SDLK_RIGHTBRACKET) setRenderScale(m_renderScale * 2.0f);
         else if (k == SDLK_p) saveScreenshot();
+        else if (k == SDLK_x) setSimd(!m_renderer->simdShading());
         break;
     }
     default: break;
@@ -199,10 +200,11 @@ bool ViewerApp::tick()
         const RenderStats& s = m_renderer->stats();
         char title[256];
         std::snprintf(title, sizeof(title),
-                      "tiny-software-renderer | %s | %s%s | %dx%d | %.1f ms (%.0f fps) | %llu tris | %d threads",
+                      "tiny-software-renderer | %s | %s%s | %dx%d | %.1f ms (%.0f fps) | %llu tris | %d threads | %s",
                       m_scene.name.c_str(), debugViewName(m_settings.view), m_settings.wireframe ? "+wire" : "",
                       m_texW, m_texH, m_frameMs, 1000.0 / m_frameMs,
-                      static_cast<unsigned long long>(s.trianglesSubmitted), threadCount());
+                      static_cast<unsigned long long>(s.trianglesSubmitted), threadCount(),
+                      m_renderer->simdShading() ? Renderer::simdBackend() : "scalar");
         SDL_SetWindowTitle(m_window, title);
     }
     return true;
@@ -215,13 +217,13 @@ std::string ViewerApp::statsJson() const
     std::snprintf(buf, sizeof(buf),
                   "{\"frameMs\":%.2f,\"shadowMs\":%.2f,\"width\":%d,\"height\":%d,\"threads\":%d,"
                   "\"maxThreads\":%d,\"triangles\":%llu,\"rasterized\":%llu,\"culled\":%llu,"
-                  "\"fragments\":%llu,\"scene\":%d,\"view\":%d}",
+                  "\"fragments\":%llu,\"scene\":%d,\"view\":%d,\"simd\":%d,\"backend\":\"%s\"}",
                   m_frameMs, m_shadowMs, m_texW, m_texH, threadCount(), m_maxThreads,
                   static_cast<unsigned long long>(s.trianglesSubmitted),
                   static_cast<unsigned long long>(s.trianglesRasterized),
                   static_cast<unsigned long long>(s.trianglesCulled),
                   static_cast<unsigned long long>(s.fragmentsShaded), m_sceneIndex,
-                  static_cast<int>(m_settings.view));
+                  static_cast<int>(m_settings.view), m_renderer->simdShading() ? 1 : 0, Renderer::simdBackend());
     return buf;
 }
 

@@ -230,17 +230,41 @@ bool buildScene(const std::string& name, const std::string& assetDir, Scene& out
 void SceneRenderer::drawSky(Renderer& renderer, Framebuffer& target, const Mat4& invViewProj, const Vec3& cameraPos,
                             const Environment& env)
 {
+    // Runs after the main pass and only fills pixels no geometry touched
+    // (depth still at the clear value), 4 pixels per SIMD iteration.
     const int w = target.width(), h = target.height();
     Vec3* color = target.colorData();
+    const float* depth = target.depthData();
+    // Far-plane point for (ndcX, ndcY) is col0 * ndcX + rowBase(ndcY): linear in ndcX.
+    const Vec4 col0(invViewProj.m[0][0], invViewProj.m[1][0], invViewProj.m[2][0], invViewProj.m[3][0]);
+    const F4 laneOffset(0.5f, 1.5f, 2.5f, 3.5f);
+    const V3 cam(cameraPos);
+
     renderer.pool().parallelFor(h, [&](int y, int) {
-        float ndcY = 1.0f - 2.0f * (static_cast<float>(y) + 0.5f) / static_cast<float>(h);
-        for (int x = 0; x < w; ++x) {
-            float ndcX = 2.0f * (static_cast<float>(x) + 0.5f) / static_cast<float>(w) - 1.0f;
-            Vec4 far = invViewProj * Vec4(ndcX, ndcY, 1.0f, 1.0f);
-            Vec3 dir = normalize(far.xyz() / far.w - cameraPos);
+        const float ndcY = 1.0f - 2.0f * (static_cast<float>(y) + 0.5f) / static_cast<float>(h);
+        const Vec4 base = invViewProj * Vec4(0.0f, ndcY, 1.0f, 1.0f);
+        const size_t rowIndex = static_cast<size_t>(y) * w;
+
+        for (int x = 0; x < w; x += 4) {
+            int empty = 0;
+            for (int lane = 0; lane < 4 && x + lane < w; ++lane)
+                if (depth[rowIndex + x + lane] >= 1.0f) empty |= 1 << lane;
+            if (!empty) continue;
+
+            const F4 ndcX = (F4(static_cast<float>(x)) + laneOffset) * F4(2.0f / static_cast<float>(w)) - F4(1.0f);
+            const F4 invFw = F4(1.0f) / (F4(base.w) + ndcX * F4(col0.w));
+            V3 dir(F4(base.x) + ndcX * F4(col0.x), F4(base.y) + ndcX * F4(col0.y), F4(base.z) + ndcX * F4(col0.z));
+            dir = normalize(dir * invFw - cam);
             // Below the horizon the background shows the fogged-out ground, i.e. the horizon color.
-            dir = normalize(Vec3(dir.x, std::max(dir.y, 0.0f), dir.z));
-            color[static_cast<size_t>(y) * w + x] = env.radiance(dir);
+            dir.y = max(dir.y, F4(0.0f));
+            const V3 c = env.radiance4(normalize(dir));
+
+            float r[4], g[4], b[4];
+            c.x.store(r);
+            c.y.store(g);
+            c.z.store(b);
+            for (int lane = 0; lane < 4; ++lane)
+                if (empty >> lane & 1) color[rowIndex + x + lane] = {r[lane], g[lane], b[lane]};
         }
     });
 }
@@ -266,7 +290,9 @@ void SceneRenderer::render(Renderer& renderer, Scene& scene, const OrbitCamera& 
         renderer.setWireframeOverlay(false);
         renderer.begin(m_shadow.target());
         DrawState state;
-        state.cull = CullMode::None; // thin/open meshes must still cast shadows
+        // Render back faces only: halves the work for closed meshes and moves the
+        // stored depth to the far side of thin casters, which reduces shadow acne.
+        state.cull = CullMode::Front;
         for (SceneObject& obj : scene.objects) {
             if (!obj.castsShadow) continue;
             obj.shadowShader.lightMvp = m_shadow.lightViewProj() * obj.transform;
@@ -290,18 +316,17 @@ void SceneRenderer::render(Renderer& renderer, Scene& scene, const OrbitCamera& 
     m_frame.view = settings.view;
     m_frame.fogDensity = scene.fogDensity;
 
-    if (toneMapFor(settings.view) == ToneMap::AcesFilmic) {
-        target.clearDepth(1.0f);
-        drawSky(renderer, target, m_frame.viewProj.inverse(), m_frame.cameraPos, scene.env);
-    } else {
-        target.clear(Vec3(0.02f));
-    }
+    const bool sky = toneMapFor(settings.view) == ToneMap::AcesFilmic;
+    if (sky) target.clearDepth(1.0f); // every color pixel is written by geometry or the sky
+    else target.clear(Vec3(0.02f));
 
     renderer.setWireframeOverlay(settings.wireframe);
     renderer.begin(target);
     for (SceneObject& obj : scene.objects) renderer.draw(*obj.mesh, obj.shader);
     renderer.end();
     m_mainMs = renderer.stats().geometryMs + renderer.stats().rasterMs;
+
+    if (sky) drawSky(renderer, target, m_frame.viewProj.inverse(), m_frame.cameraPos, scene.env);
 }
 
 } // namespace sr

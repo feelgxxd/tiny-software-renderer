@@ -36,6 +36,8 @@ struct Options {
     float time = 0.0f;
     float turntable = -1.0f; // < 0: use the scene default
     bool bench = false;
+    bool benchThreads = false;
+    bool simd = true;
     int benchFrames = 20;
     RenderSettings settings;
 };
@@ -56,7 +58,9 @@ void usage()
         "  --turntable S      camera orbit speed in rad/s (default: per scene)\n"
         "  --frames N         render an N-frame sequence (PATH gets _0000 suffixes)\n"
         "  --fps F            sequence frame rate (default 30)\n"
-        "  --bench            measure frame time for 1..N threads\n"
+        "  --bench            scalar vs. SIMD, 1 vs. all threads (markdown table)\n"
+        "  --bench-threads    frame time for 1, 2, 4, ... N threads\n"
+        "  --no-simd          use the scalar per-pixel shading path\n"
         "  --bench-frames N   frames per benchmark run (default 20)\n"
         "  --assets DIR       asset directory (default %s)\n",
         SR_ASSET_DIR);
@@ -95,6 +99,8 @@ bool parseArgs(int argc, char** argv, Options& o)
         else if (a == "--time") o.time = static_cast<float>(std::atof(next()));
         else if (a == "--turntable") o.turntable = static_cast<float>(std::atof(next()));
         else if (a == "--bench") o.bench = true;
+        else if (a == "--bench-threads") o.bench = o.benchThreads = true;
+        else if (a == "--no-simd") o.simd = false;
         else if (a == "--bench-frames") o.benchFrames = std::max(1, std::atoi(next()));
         else if (a == "--wireframe") o.settings.wireframe = true;
         else if (a == "--no-shadows") o.settings.shadows = false;
@@ -148,7 +154,51 @@ double renderOnce(Renderer& renderer, SceneRenderer& sceneRenderer, Scene& scene
     return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
 }
 
+// Median frame time over o.benchFrames frames (after warm-up).
+double measure(const Options& o, Scene& scene, Framebuffer& fb, int threads, bool simd)
+{
+    Renderer renderer(threads);
+    renderer.setSimdShading(simd);
+    SceneRenderer sceneRenderer;
+    for (int i = 0; i < 3; ++i) renderOnce(renderer, sceneRenderer, scene, 0.0f, fb, o.settings);
+    std::vector<double> times;
+    for (int i = 0; i < o.benchFrames; ++i)
+        times.push_back(renderOnce(renderer, sceneRenderer, scene, i / 30.0f, fb, o.settings));
+    std::sort(times.begin(), times.end());
+    return times[times.size() / 2];
+}
+
 int runBench(const Options& o, const std::vector<std::string>& scenes)
+{
+    const int maxThreads = ThreadPool::hardwareThreads();
+    std::printf("Resolution %dx%d, median of %d frames, %d hardware threads, SIMD backend: %s\n\n", o.width,
+                o.height, o.benchFrames, maxThreads, Renderer::simdBackend());
+    std::printf("| Scene | Triangles | Scalar, 1 thread | SIMD, 1 thread | SIMD, %d threads | SIMD gain | Total gain |\n",
+                maxThreads);
+    std::printf("|---|---:|---:|---:|---:|---:|---:|\n");
+
+    Framebuffer fb(o.width, o.height);
+    for (const std::string& name : scenes) {
+        Scene scene;
+        std::string error;
+        if (!buildScene(name, o.assets, scene, &error)) {
+            std::fprintf(stderr, "skipping %s: %s\n", name.c_str(), error.c_str());
+            continue;
+        }
+        size_t tris = 0;
+        for (const auto& obj : scene.objects) tris += obj.mesh->triangleCount();
+
+        double scalar1 = measure(o, scene, fb, 1, false);
+        double simd1 = measure(o, scene, fb, 1, true);
+        double simdN = measure(o, scene, fb, maxThreads, true);
+        std::printf("| %s | %zu | %.1f ms | %.1f ms | **%.1f ms** (%.0f FPS) | %.2fx | %.1fx |\n", name.c_str(), tris,
+                    scalar1, simd1, simdN, 1000.0 / simdN, scalar1 / simd1, scalar1 / simdN);
+        std::fflush(stdout);
+    }
+    return 0;
+}
+
+int runThreadBench(const Options& o, const std::vector<std::string>& scenes)
 {
     std::vector<int> threadCounts;
     int maxThreads = ThreadPool::hardwareThreads();
@@ -173,15 +223,7 @@ int runBench(const Options& o, const std::vector<std::string>& scenes)
 
         double baseline = 0.0;
         for (int threads : threadCounts) {
-            Renderer renderer(threads);
-            SceneRenderer sceneRenderer;
-            for (int i = 0; i < 3; ++i) renderOnce(renderer, sceneRenderer, scene, 0.0f, fb, o.settings); // warm-up
-
-            std::vector<double> times;
-            for (int i = 0; i < o.benchFrames; ++i)
-                times.push_back(renderOnce(renderer, sceneRenderer, scene, i / 30.0f, fb, o.settings));
-            std::sort(times.begin(), times.end());
-            double median = times[times.size() / 2];
+            double median = measure(o, scene, fb, threads, o.simd);
             if (threads == 1) baseline = median;
             std::printf("| %s | %zu | %d | %.2f | %.1f | %.2fx |\n", name.c_str(), tris, threads, median,
                         1000.0 / median, baseline / median);
@@ -202,9 +244,10 @@ int main(int argc, char** argv)
     if (o.scene == "all") scenes = sceneNames();
     else scenes.push_back(o.scene);
 
-    if (o.bench) return runBench(o, scenes);
+    if (o.bench) return o.benchThreads ? runThreadBench(o, scenes) : runBench(o, scenes);
 
     Renderer renderer(o.threads);
+    renderer.setSimdShading(o.simd);
     SceneRenderer sceneRenderer;
     Framebuffer fb(o.width, o.height);
     int failures = 0;
@@ -229,10 +272,14 @@ int main(int argc, char** argv)
                 return 1;
             }
             const RenderStats& s = renderer.stats();
-            std::printf("%s  %.2f ms  (%llu tris in, %llu rasterized, %llu fragments, %d threads)\n", path.c_str(), ms,
+            std::printf("%s  %.2f ms [shadow %.1f, main %.1f, sky+other %.1f]  (%llu tris in, %llu rasterized, "
+                        "%llu fragments, %d threads, %s)\n",
+                        path.c_str(), ms, sceneRenderer.shadowMs(), sceneRenderer.mainMs(),
+                        ms - sceneRenderer.shadowMs() - sceneRenderer.mainMs(),
                         static_cast<unsigned long long>(s.trianglesSubmitted),
                         static_cast<unsigned long long>(s.trianglesRasterized),
-                        static_cast<unsigned long long>(s.fragmentsShaded), renderer.threadCount());
+                        static_cast<unsigned long long>(s.fragmentsShaded), renderer.threadCount(),
+                        renderer.simdShading() ? Renderer::simdBackend() : "scalar");
         }
     }
     return failures == 0 ? 0 : 1;
