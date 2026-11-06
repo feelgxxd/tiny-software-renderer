@@ -1,38 +1,50 @@
 #pragma once
-#include <vector>
+
+#include "math/math.h"
+
+#include <cstdint>
 #include <string>
-#include "../math/vec3.h"
+#include <vector>
+
+namespace sr {
 
 struct Vertex {
     Vec3 position;
-    Vec3 normal;
-    Vec3 texCoord;  // UV coordinates (stored as Vec3 for now)
+    Vec3 normal{0, 1, 0};
+    Vec2 uv;
+    Vec4 tangent{1, 0, 0, 1}; // xyz = tangent, w = bitangent sign
+};
+
+struct Bounds {
+    Vec3 min{0.0f};
+    Vec3 max{0.0f};
+    Vec3 center() const { return (min + max) * 0.5f; }
+    float radius() const { return length(max - min) * 0.5f; }
 };
 
 struct Mesh {
     std::vector<Vertex> vertices;
-    std::vector<uint32_t> indices;  // Index buffer
+    std::vector<uint32_t> indices; // triangle list, counter-clockwise front faces
 
-    // Get triangle by index
-    void getTriangle(uint32_t triangleIndex, Vertex& v0, Vertex& v1, Vertex& v2) const {
-        if (triangleIndex * 3 + 2 >= indices.size()) return;
-        
-        uint32_t idx0 = indices[triangleIndex * 3];
-        uint32_t idx1 = indices[triangleIndex * 3 + 1];
-        uint32_t idx2 = indices[triangleIndex * 3 + 2];
-        
-        v0 = vertices[idx0];
-        v1 = vertices[idx1];
-        v2 = vertices[idx2];
-    }
-    
-    uint32_t getTriangleCount() const {
-        return indices.size() / 3;
-    }
+    size_t triangleCount() const { return indices.size() / 3; }
+    Bounds bounds() const;
 
-    // Static method to load OBJ file
-    static Mesh loadOBJ(const std::string& filepath);
-    
-    // Static method to create a simple cube
-    static Mesh createCube(float size = 1.0f);
+    // Area-weighted smooth normals from triangle geometry.
+    void computeNormals();
+    // Per-vertex tangent frames from UVs (needed for normal mapping).
+    void computeTangents();
+    // Re-centers on the origin and scales so the bounding sphere has the given radius.
+    void normalizeToRadius(float radius);
+
+    // Wavefront OBJ: v/vt/vn, polygon faces (fan-triangulated), negative indices.
+    // Vertices are de-duplicated per unique (v, vt, vn) triple.
+    // Returns false and leaves the mesh empty if the file can't be read.
+    bool loadObj(const std::string& path, std::string* error = nullptr);
+
+    static Mesh cube(float size = 1.0f);
+    static Mesh plane(float size, float uvScale = 1.0f, int subdivisions = 1);
+    static Mesh uvSphere(float radius, int segments, int rings);
+    static Mesh torus(float majorRadius, float minorRadius, int majorSegments, int minorSegments);
 };
+
+} // namespace sr
