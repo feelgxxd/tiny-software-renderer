@@ -241,6 +241,7 @@ backend, and with the scalar fallback (`-DSR_SIMD_SCALAR=ON`).
 - [SDL2](https://www.libsdl.org/) (zlib license), used only to present frames
 - [coi-serviceworker](https://github.com/gzuidhof/coi-serviceworker) by Guido Zuidhof (MIT), for cross-origin isolation on static hosts
 - [Spot](https://www.cs.cmu.edu/~kmcrane/Projects/ModelRepository/) by Keenan Crane (public domain)
+- [IBM Plex Mono](https://github.com/IBM/plex) and [Chakra Petch](https://github.com/m4rc1e/Chakra-Petch) fonts for the demo page (SIL Open Font License, see `web/fonts/`)
 - The environment BRDF approximation follows Brian Karis, *Physically Based Shading on Mobile* (2014)
 
 ## License

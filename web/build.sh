@@ -16,6 +16,7 @@ done
 dist=build-web/dist
 rm -rf "$dist"
 mkdir -p "$dist"
-cp web/index.html web/coi-serviceworker.js "$dist/"
+cp web/index.html web/coi-serviceworker.js web/favicon.svg web/apple-touch-icon.png "$dist/"
+cp -r web/brand web/fonts "$dist/"
 cp build-web/ON/bin/sr_web_mt.* build-web/OFF/bin/sr_web_st.* "$dist/"
 echo "Demo written to $dist"
