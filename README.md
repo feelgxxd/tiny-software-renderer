@@ -1,3 +1,5 @@
+<a href="https://github.com/feelgxxd"><picture><source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/feelgxxd/feelgxxd/main/assets/banners/tiny-software-renderer-dark.svg"><source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/feelgxxd/feelgxxd/main/assets/banners/tiny-software-renderer-light.svg"><img alt="tiny-software-renderer, a feelgxxd tape" src="https://raw.githubusercontent.com/feelgxxd/feelgxxd/main/assets/banners/tiny-software-renderer-dark.svg" width="100%"></picture></a>
+
 # tiny-software-renderer
 
 [![CI](https://github.com/feelgxxd/tiny-software-renderer/actions/workflows/ci.yml/badge.svg)](https://github.com/feelgxxd/tiny-software-renderer/actions/workflows/ci.yml)
