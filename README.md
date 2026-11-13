@@ -2,6 +2,7 @@
 
 # tiny-software-renderer
 
+[![XERJ Corpus Hub contributor](https://hub.xerj.org/contributors/feelgxxd/badge.svg)](https://hub.xerj.org/contributors/feelgxxd)
 [![CI](https://github.com/feelgxxd/tiny-software-renderer/actions/workflows/ci.yml/badge.svg)](https://github.com/feelgxxd/tiny-software-renderer/actions/workflows/ci.yml)
 ![C++17](https://img.shields.io/badge/C%2B%2B-17-blue.svg)
 ![Platforms](https://img.shields.io/badge/platforms-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey.svg)
